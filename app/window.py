@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QDockWidget,
     QFileDialog,
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (
 
 from core.document import Document
 from image.export import export_image
+
 from ui.adjustment_panel import AdjustmentPanel
 from ui.canvas import ImageCanvas
 from ui.histogram import HistogramWidget
@@ -77,7 +77,7 @@ class MainWindow(QMainWindow):
         )
 
         dock = QDockWidget(
-            "Adjustments",
+            "Develop",
             self
         )
 
@@ -90,7 +90,7 @@ class MainWindow(QMainWindow):
         )
 
         dock.setMinimumWidth(
-            340
+            380
         )
 
         self.addDockWidget(
@@ -140,10 +140,6 @@ class MainWindow(QMainWindow):
             (
                 "Images (*.jpg *.jpeg *.png *.tif "
                 "*.tiff *.webp *.bmp);;"
-                "JPEG (*.jpg *.jpeg);;"
-                "PNG (*.png);;"
-                "TIFF (*.tif *.tiff);;"
-                "WebP (*.webp);;"
                 "All Files (*)"
             )
         )
@@ -169,14 +165,48 @@ class MainWindow(QMainWindow):
 
     def change_adjustment(
         self,
-        name,
-        value
+        *args
     ):
-        self.document.set_adjustment(
-            name,
-            value,
-            add_history=False
-        )
+        if not args:
+            return
+
+        if len(args) == 2:
+            name, value = args
+
+            if name.startswith(
+                "curves_"
+            ):
+                setattr(
+                    self.document.adjustments,
+                    name,
+                    value
+                )
+
+            elif isinstance(
+                value,
+                dict
+            ):
+                setattr(
+                    self.document.adjustments,
+                    name,
+                    value
+                )
+
+            else:
+                setattr(
+                    self.document.adjustments,
+                    name,
+                    float(value)
+                )
+
+        elif len(args) == 3:
+            name, channel, values = args
+
+            self.document.adjustments.hsl[
+                channel
+            ] = values
+
+        self.document.dirty = True
 
         self.refresh_render()
 
@@ -291,15 +321,11 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self,
             "PhotoEditor Project",
-            "Full .photoedit project saving will be implemented in the project system."
+            "Full project saving will be added in the project system."
         )
 
     def update_title(self):
         if self.document.path:
-            filename = (
-                self.document.path.name
-            )
-
             marker = (
                 " *"
                 if self.document.dirty
@@ -307,8 +333,9 @@ class MainWindow(QMainWindow):
             )
 
             self.setWindowTitle(
-                f"PhotoEditor — "
-                f"{filename}{marker}"
+                "PhotoEditor — "
+                f"{self.document.path.name}"
+                f"{marker}"
             )
 
         else:
