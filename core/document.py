@@ -10,7 +10,7 @@ class Document:
         self.image=None;self.original_image=None;self.path=None;self.adjustments=Adjustments();self.history=History();self.dirty=False;self.render_cache=RenderCache(2);self.preview_cache=RenderCache(3)
     def load(self,path):
         path=Path(path);image=load_image(path);self.original_image=image.copy();self.image=image.copy();self.path=path;self.adjustments.reset();self.history.clear();self.history.push(self.adjustments);self.render_cache.clear();self.preview_cache.clear();self.dirty=False
-    def _preview_source(self):
+    def preview_source(self):
         image=self.original_image
         if image is None:return None
         longest=max(image.size)
@@ -24,7 +24,7 @@ class Document:
         key=(preview,repr(self.adjustments.to_dict()))
         cached=cache.get(key)
         if cached is not None:return cached.copy()
-        source=self._preview_source() if preview else self.original_image
+        source=self.preview_source() if preview else self.original_image
         result=render_image(source,self.adjustments)
         cache.put(key,result.copy())
         return result
