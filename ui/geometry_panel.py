@@ -18,7 +18,7 @@ class GeometryPanel(QWidget):
             rw,rh=map(float,ratio.split(":")); target=rw/rh
             w,h=self.document.original_image.size; current=w/h
             if current>target:
-                nw=target*current; margin=(1-nw)/2; vals=(margin,0,1-margin,1)
+                nw=target/current; margin=(1-nw)/2; vals=(margin,0,1-margin,1)
             else:
                 nh=current/target; margin=(1-nh)/2; vals=(0,margin,1,1-margin)
         for k,v in zip(("crop_left","crop_top","crop_right","crop_bottom"),vals):self.on_change(k,v,True)
