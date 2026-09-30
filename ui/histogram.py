@@ -10,11 +10,17 @@ class HistogramWidget(QWidget):
         super().__init__(parent)
 
         self.image = None
+        self.histograms = None
 
         self.setMinimumHeight(150)
 
     def set_image(self, image):
         self.image = image
+        if image is None:
+            self.histograms = None
+        else:
+            array = np.asarray(image.convert('RGB'), dtype=np.uint8)
+            self.histograms = [np.histogram(channel, bins=256, range=(0, 255))[0] for channel in (array[...,0], array[...,1], array[...,2])]
         self.update()
 
     def paintEvent(self, event):
@@ -28,26 +34,13 @@ class HistogramWidget(QWidget):
         if self.image is None:
             return
 
-        array = np.asarray(
-            self.image
-        )
-
-        channels = [
-            array[..., 0],
-            array[..., 1],
-            array[..., 2],
-        ]
+        if self.histograms is None:
+            return
 
         width = self.width()
         height = self.height()
 
-        for channel_index, channel in enumerate(channels):
-            histogram, _ = np.histogram(
-                channel,
-                bins=256,
-                range=(0, 255)
-            )
-
+        for channel_index, histogram in enumerate(self.histograms):
             if histogram.max() == 0:
                 continue
 
