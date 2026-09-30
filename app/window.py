@@ -20,6 +20,8 @@ class MainWindow(QMainWindow):
         self.canvas=ImageCanvas();self.setCentralWidget(self.canvas)
         self.create_menu();self.create_toolbar();self.create_adjustment_panel();self.create_geometry_panel();self.create_mask_panel();self.create_histogram();self.create_status_bar();self.update_title()
         self.canvas.crop_committed.connect(self.apply_interactive_crop)
+        self.mask_panel.paint_requested.connect(self.canvas.start_brush)
+        self.canvas.brush_stroke_committed.connect(self.mask_panel.add_stroke)
 
     def create_menu(self):self.setMenuBar(MenuBar(self))
     def create_toolbar(self):self.addToolBar(Qt.TopToolBarArea,MainToolBar(self))
