@@ -14,12 +14,22 @@ class ImageCanvas(QWidget):
         self.dragging=False; self.last_mouse_position=QPoint(); self.show_before=False
         self.crop_mode=False; self.crop_start=None; self.crop_end=None
         self.brush_mode=False; self.brush_points=[]
+        self._pixmap=None; self._before_pixmap=None; self._scaled_pixmap=None; self._scaled_before_pixmap=None
         self.setMinimumSize(500,400); self.setMouseTracking(True)
 
+    def _invalidate_pixmaps(self):
+        self._scaled_pixmap=None;self._scaled_before_pixmap=None
+
     def set_image(self,image,before_image=None):
-        self.image=image; self.before_image=before_image
+        self.image=image;self.before_image=before_image
+        self._pixmap=QPixmap.fromImage(ImageQt(image)) if image is not None else None
+        self._before_pixmap=QPixmap.fromImage(ImageQt(before_image)) if before_image is not None else None
+        self._invalidate_pixmaps()
         if not self.crop_mode:self.fit_image()
         self.update()
+
+    def resizeEvent(self,event):
+        self._invalidate_pixmaps();super().resizeEvent(event)
 
     def fit_image(self):
         if self.image is None:return
@@ -32,8 +42,8 @@ class ImageCanvas(QWidget):
         w=int(self.image.width*self.zoom); h=int(self.image.height*self.zoom)
         return QRect(self.offset.x()-w//2,self.offset.y()-h//2,w,h)
 
-    def zoom_in(self):self.zoom=min(20.0,self.zoom*1.2);self.update()
-    def zoom_out(self):self.zoom=max(.02,self.zoom/1.2);self.update()
+    def zoom_in(self):self.zoom=min(20.0,self.zoom*1.2);self._invalidate_pixmaps();self.update()
+    def zoom_out(self):self.zoom=max(.02,self.zoom/1.2);self._invalidate_pixmaps();self.update()
     def reset_view(self):self.fit_image();self.update()
     def toggle_before(self):self.show_before=not self.show_before;self.update()
 
@@ -67,7 +77,7 @@ class ImageCanvas(QWidget):
     def wheelEvent(self,event):
         if self.image is None:return
         self.zoom*=1.15 if event.angleDelta().y()>0 else 1/1.15
-        self.zoom=max(.02,min(20.0,self.zoom));self.update()
+        self.zoom=max(.02,min(20.0,self.zoom));self._invalidate_pixmaps();self.update()
 
     def mousePressEvent(self,event):
         if self.brush_mode and event.button()==Qt.LeftButton:
@@ -106,8 +116,13 @@ class ImageCanvas(QWidget):
         if self.image is None:
             painter.setPen(Qt.white);painter.drawText(self.rect(),Qt.AlignCenter,"Open an image to begin");return
         image=self.before_image if self.show_before and self.before_image is not None else self.image
-        pixmap=QPixmap.fromImage(ImageQt(image)); rect=self.image_rect()
-        scaled=pixmap.scaled(rect.width(),rect.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        rect=self.image_rect()
+        pixmap=self._before_pixmap if self.show_before else self._pixmap
+        cache_name='_scaled_before_pixmap' if self.show_before else '_scaled_pixmap'
+        scaled=getattr(self,cache_name)
+        if scaled is None or scaled.size()!=rect.size():
+            scaled=pixmap.scaled(rect.size(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            setattr(self,cache_name,scaled)
         painter.drawPixmap(rect.left(),rect.top(),scaled)
         if self.crop_mode:
             r=self.image_rect(); painter.fillRect(r,QColor(0,0,0,90))
