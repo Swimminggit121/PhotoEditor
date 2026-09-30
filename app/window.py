@@ -14,6 +14,7 @@ from ui.toolbar import MainToolBar
 from ui.geometry_panel import GeometryPanel
 from ui.mask_panel import MaskPanel
 from ui.export_dialog import ExportDialog
+from ui.batch_editor_dialog import BatchEditorDialog
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -108,6 +109,10 @@ class MainWindow(QMainWindow):
     def zoom_out(self):self.canvas.zoom_out()
     def fit_image(self):self.canvas.reset_view()
     def toggle_before(self):self.canvas.toggle_before()
+    def batch_auto_edit(self):
+        dlg=BatchEditorDialog(self)
+        dlg.exec()
+
     def batch_export(self):
         input_dir=QFileDialog.getExistingDirectory(self,"Choose Input Folder")
         if not input_dir:return
