@@ -57,9 +57,15 @@ class MainWindow(QMainWindow):
     def change_adjustment(self,*args):
         if not args:return
         name,value=args[:2]
-        if name.startswith("curves_") or isinstance(value,dict):setattr(self.document.adjustments,name,value)
-        elif isinstance(value,bool):setattr(self.document.adjustments,name,value)
-        else:setattr(self.document.adjustments,name,float(value))
+        if name=="hsl" and len(args)>=3:
+            channel=args[1]; values=args[2]
+            self.document.adjustments.hsl[channel]=dict(values)
+        elif name.startswith("curves_") or isinstance(value,dict):
+            setattr(self.document.adjustments,name,value)
+        elif isinstance(value,bool):
+            setattr(self.document.adjustments,name,value)
+        else:
+            setattr(self.document.adjustments,name,float(value))
         self.document.dirty=True;self.refresh_render()
     def change_geometry(self,name,value,commit=True):
         setattr(self.document.adjustments,name,value);self.document.dirty=True
