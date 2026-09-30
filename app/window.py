@@ -89,7 +89,7 @@ class MainWindow(QMainWindow):
         except Exception as exc:QMessageBox.critical(self,"Export failed",str(exc))
     def save_project(self):
         if not self.document.has_image():QMessageBox.information(self,"Save Project","Open an image first.");return
-        default=str((self.document.path.parent if self.document.path else Path.home())/(self.document.path.stem if self.document.path else "project")+".photoedit")
+        default=str((self.document.path.parent if self.document.path else Path.home())/(self.document.path.stem if self.document.path else "project"))+".photoedit"
         path,_=QFileDialog.getSaveFileName(self,"Save PhotoEditor Project",default,"PhotoEditor Project (*.photoedit)")
         if not path:return
         if not path.lower().endswith(".photoedit"):path+=".photoedit"
