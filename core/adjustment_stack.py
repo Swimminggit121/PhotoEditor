@@ -28,6 +28,9 @@ class Adjustments:
     noise_reduction: float=0.0
     grain: float=0.0
     vignette: float=0.0
+    lens_correction: float=0.0
+    chromatic_aberration: float=0.0
+    distortion: float=0.0
     rotation: float=0.0
     flip_horizontal: bool=False
     flip_vertical: bool=False
