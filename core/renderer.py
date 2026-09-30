@@ -36,6 +36,7 @@ def _saturation(a,v):
 def _vibrance(a,v):
     q=float(v)/100;sat=a.max(-1)-a.min(-1);mean=a.mean(-1,keepdims=True);return _clip(a+(a-mean)*(1-sat)[...,None]*q*.8)
 def _detail(a,texture,clarity,dehaze,sharp,noise):
+    if not any((texture,clarity,dehaze,sharp,noise)): return a
     try:
         import cv2
         if texture or clarity or sharp:
@@ -58,6 +59,7 @@ def _vignette(a,v):
     h,w=a.shape[:2];yy,xx=np.ogrid[:h,:w];x=(xx-(w-1)/2)/max((w-1)/2,1);y=(yy-(h-1)/2)/max((h-1)/2,1);r=np.sqrt(x*x+y*y);mask=np.clip((r-.25)/.75,0,1)**1.7
     return _clip(a*(1-q*.75*mask)[...,None])
 def _local(a,adjustments):
+    if not adjustments.local_adjustments: return a
     for mask in adjustments.local_adjustments:
         weights=rasterize_mask(mask,a.shape)
         if not np.any(weights):continue
@@ -82,12 +84,19 @@ def _transform(a,adj):
     return out
 def render_image(image,adjustments:Adjustments):
     original=image;a=_array(image)
-    a=_exposure(a,adjustments.exposure);a=_contrast(a,adjustments.contrast)
-    a=_highlights_shadows(a,adjustments.highlights,adjustments.shadows);a=_whites_blacks(a,adjustments.whites,adjustments.blacks)
-    a=_temperature(a,adjustments.temperature);a=_tint(a,adjustments.tint)
-    a=apply_hsl(a,adjustments.hsl);a=apply_curves(a,adjustments.curves_master,adjustments.curves_red,adjustments.curves_green,adjustments.curves_blue)
-    a=_saturation(a,adjustments.saturation);a=_vibrance(a,adjustments.vibrance)
-    a=apply_colour_grade(a,adjustments.grading_shadows,adjustments.grading_midtones,adjustments.grading_highlights,adjustments.grading_global,adjustments.grading_blending,adjustments.grading_balance)
+    if adjustments.exposure:a=_exposure(a,adjustments.exposure)
+    if adjustments.contrast:a=_contrast(a,adjustments.contrast)
+    if adjustments.highlights or adjustments.shadows:a=_highlights_shadows(a,adjustments.highlights,adjustments.shadows)
+    if adjustments.whites or adjustments.blacks:a=_whites_blacks(a,adjustments.whites,adjustments.blacks)
+    if adjustments.temperature:a=_temperature(a,adjustments.temperature)
+    if adjustments.tint:a=_tint(a,adjustments.tint)
+    if any(float(v.get('hue',0)) or float(v.get('saturation',0)) or float(v.get('luminance',0)) for v in adjustments.hsl.values()): a=apply_hsl(a,adjustments.hsl)
+    if any(any(abs(float(x)-float(y))>1e-6 for x,y in points) for points in (adjustments.curves_master,adjustments.curves_red,adjustments.curves_green,adjustments.curves_blue)): a=apply_curves(a,adjustments.curves_master,adjustments.curves_red,adjustments.curves_green,adjustments.curves_blue)
+    if adjustments.saturation:a=_saturation(a,adjustments.saturation)
+    if adjustments.vibrance:a=_vibrance(a,adjustments.vibrance)
+    grades=(adjustments.grading_shadows,adjustments.grading_midtones,adjustments.grading_highlights,adjustments.grading_global)
+    if any(abs(float(v))>1e-6 for g in grades for v in g.values()) or abs(float(adjustments.grading_blending)-50)>1e-6 or abs(float(adjustments.grading_balance))>1e-6:
+        a=apply_colour_grade(a,adjustments.grading_shadows,adjustments.grading_midtones,adjustments.grading_highlights,adjustments.grading_global,adjustments.grading_blending,adjustments.grading_balance)
     a=_detail(a,adjustments.texture,adjustments.clarity,adjustments.dehaze,adjustments.sharpening,adjustments.noise_reduction)
     a=apply_lens_correction(a,adjustments.lens_correction,adjustments.chromatic_aberration)
     a=apply_lens_correction(a,adjustments.distortion,0)
