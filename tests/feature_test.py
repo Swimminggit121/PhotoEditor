@@ -11,6 +11,7 @@ from core.document import Document
 from core.project import save_project, load_project
 from masks.manager import MaskManager
 from masks.raster import rasterize_mask
+from core.auto_grade import auto_edit
 
 def main():
     image=Image.new("RGB",(160,100),(120,140,160))
@@ -27,6 +28,10 @@ def main():
     mask=rasterize_mask(a.local_adjustments[0],(100,160))
     assert mask.shape==(100,160) and float(mask.max())>0
     assert render_image(image,a).size==(160,100)
+
+    auto=auto_edit(image)
+    assert auto.curves_master and auto.grading_shadows["saturation"] > 0
+    assert render_image(image,auto).size==(160,100)
 
     with TemporaryDirectory() as tmp:
         d=Document();d.original_image=image.copy();d.image=image.copy();d.adjustments=a
