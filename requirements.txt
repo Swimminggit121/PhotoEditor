@@ -3,7 +3,6 @@ numpy
 Pillow
 opencv-python
 scikit-image
-rawpy
 tifffile
 exifread
 scipy
