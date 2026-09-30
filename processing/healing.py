@@ -17,3 +17,13 @@ def apply_heal(image, center, radius=20.0, source=None, strength=1.0):
             a[y0:y1,x0:x1]=roi*(1-m)+src_patch*m
     except Exception:pass
     return np.clip(a,0,1)
+
+
+def apply_retouch_spots(image, spots):
+    out=np.asarray(image,dtype=np.float32).copy()
+    for spot in spots or []:
+        try:
+            out=apply_heal(out,spot.get("center",[.5,.5]),spot.get("radius",20),spot.get("source"),spot.get("strength",1.0))
+        except Exception:
+            continue
+    return np.clip(out,0,1)
