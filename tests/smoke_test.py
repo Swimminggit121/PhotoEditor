@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from PIL import Image
 from core.adjustment_stack import Adjustments
 from core.renderer import Renderer
