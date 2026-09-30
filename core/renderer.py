@@ -6,6 +6,7 @@ from processing.hsl import apply_hsl
 from processing.curves import apply_curves
 from processing.colour_grading import apply_colour_grade
 from processing.lens_correction import apply_lens_correction
+from processing.healing import apply_retouch_spots
 from masks.raster import rasterize_mask
 
 def _array(image):
@@ -92,6 +93,7 @@ def render_image(image,adjustments:Adjustments):
     a=apply_lens_correction(a,adjustments.distortion,0)
     a=_grain(a,adjustments.grain);a=_vignette(a,adjustments.vignette)
     a=_local(a,adjustments)
+    a=apply_retouch_spots(a,adjustments.retouch_spots)
     out=_transform(a,adjustments)
     return out if isinstance(original,Image.Image) else np.asarray(out,dtype=np.float32)/255.0
 class Renderer:
