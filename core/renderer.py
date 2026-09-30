@@ -5,6 +5,7 @@ from core.adjustment_stack import Adjustments
 from processing.hsl import apply_hsl
 from processing.curves import apply_curves
 from processing.colour_grading import apply_colour_grade
+from processing.lens_correction import apply_lens_correction
 from masks.raster import rasterize_mask
 
 def _array(image):
@@ -87,6 +88,8 @@ def render_image(image,adjustments:Adjustments):
     a=_saturation(a,adjustments.saturation);a=_vibrance(a,adjustments.vibrance)
     a=apply_colour_grade(a,adjustments.grading_shadows,adjustments.grading_midtones,adjustments.grading_highlights,adjustments.grading_global,adjustments.grading_blending,adjustments.grading_balance)
     a=_detail(a,adjustments.texture,adjustments.clarity,adjustments.dehaze,adjustments.sharpening,adjustments.noise_reduction)
+    a=apply_lens_correction(a,adjustments.lens_correction,adjustments.chromatic_aberration)
+    a=apply_lens_correction(a,adjustments.distortion,0)
     a=_grain(a,adjustments.grain);a=_vignette(a,adjustments.vignette)
     a=_local(a,adjustments)
     out=_transform(a,adjustments)
