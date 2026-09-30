@@ -1,5 +1,5 @@
 from pathlib import Path
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,QTimer
 from PySide6.QtWidgets import QDockWidget,QFileDialog,QLabel,QMainWindow,QMessageBox
 from core.document import Document
 from core.auto_grade import auto_colour_grade, auto_edit
@@ -19,7 +19,7 @@ from ui.batch_editor_dialog import BatchEditorDialog
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__();self.document=Document();self.setWindowTitle("PhotoEditor");self.resize(1600,950);self.setMinimumSize(1150,700)
-        self.canvas=ImageCanvas();self.setCentralWidget(self.canvas)
+        self.canvas=ImageCanvas();self.setCentralWidget(self.canvas);self._render_timer=QTimer(self);self._render_timer.setSingleShot(True);self._render_timer.timeout.connect(self._perform_preview_render)
         self.create_menu();self.create_toolbar();self.create_adjustment_panel();self.create_geometry_panel();self.create_mask_panel();self.create_histogram();self.create_status_bar();self.update_title()
         self.canvas.crop_committed.connect(self.apply_interactive_crop)
         self.mask_panel.paint_requested.connect(self.canvas.start_brush)
@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
             setattr(self.document.adjustments,name,value)
         else:
             setattr(self.document.adjustments,name,float(value))
-        self.document.dirty=True;self.refresh_render()
+        self.document.dirty=True;self._render_timer.start(35)
     def change_geometry(self,name,value,commit=True):
         setattr(self.document.adjustments,name,value);self.document.dirty=True
         if commit:self.document.push_history()
@@ -90,12 +90,16 @@ class MainWindow(QMainWindow):
         self.document.push_history();self.refresh_view();self.status_label.setText("Crop applied")
     def mask_changed(self):
         self.document.dirty=True;self.refresh_render();self.mask_panel.load_selected()
-    def refresh_render(self):
+    def _perform_preview_render(self):
         if not self.document.has_image():return
-        rendered=self.document.render();self.canvas.set_image(rendered,self.document.original_image);self.histogram.set_image(rendered);self.update_title()
+        rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.preview_source());self.histogram.set_image(rendered);self.update_title()
+
+    def refresh_render(self):
+        self._render_timer.stop()
+        self._perform_preview_render()
     def refresh_view(self):
         if not self.document.has_image():return
-        rendered=self.document.render();self.canvas.set_image(rendered,self.document.original_image);self.histogram.set_image(rendered);self.adjustment_panel.refresh();self.geometry_panel.refresh();self.update_title()
+        self._render_timer.stop();rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.preview_source());self.histogram.set_image(rendered);self.adjustment_panel.refresh();self.geometry_panel.refresh();self.update_title()
         self.mask_panel.list.clear()
         for m in self.document.adjustments.local_adjustments:self.mask_panel.list.addItem(m.get("name","Mask"))
         if self.document.adjustments.local_adjustments:self.mask_panel.list.setCurrentRow(0)
