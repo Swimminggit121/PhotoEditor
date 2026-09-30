@@ -50,6 +50,7 @@ class Adjustments:
     grading_blending: float=50.0
     grading_balance: float=0.0
     local_adjustments: list=field(default_factory=list)
+    retouch_spots: list=field(default_factory=list)
 
     def copy(self):
         return Adjustments.from_dict(self.to_dict())
