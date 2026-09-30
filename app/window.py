@@ -2,7 +2,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDockWidget,QFileDialog,QLabel,QMainWindow,QMessageBox
 from core.document import Document
-from core.auto_grade import auto_colour_grade
+from core.auto_grade import auto_colour_grade, auto_edit
 from core.project import save_project as write_project,load_project as read_project
 from image.export import export_image
 from processing.batch import process_folder
@@ -51,6 +51,18 @@ class MainWindow(QMainWindow):
         if not path:return
         try:read_project(self.document,path);self.refresh_view();self.status_label.setText(f"Project opened: {Path(path).name}")
         except Exception as exc:QMessageBox.critical(self,"Could not open project",str(exc))
+    def auto_edit(self):
+        if not self.document.has_image():
+            QMessageBox.information(self,"Auto Edit","Open an image first.")
+            return
+        try:
+            self.document.adjustments=auto_edit(self.document.original_image,self.document.adjustments)
+            self.document.push_history()
+            self.refresh_view()
+            self.status_label.setText("Auto Edit applied — full colour grade ready to refine")
+        except Exception as exc:
+            QMessageBox.critical(self,"Auto Edit failed",str(exc))
+
     def auto_grade(self):
         if not self.document.has_image():QMessageBox.information(self,"Auto Colour Grade","Open an image first.");return
         try:self.document.adjustments=auto_colour_grade(self.document.original_image,self.document.adjustments);self.document.push_history();self.refresh_view();self.status_label.setText("Auto Colour Grade applied")
