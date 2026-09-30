@@ -13,6 +13,7 @@ class GeometryPanel(QWidget):
     def change(self,key,value):self.on_change(key,value,True)
     def toggle(self,key):self.on_change(key,not getattr(self.document.adjustments,key),True)
     def crop(self,ratio):
+        if self.document.original_image is None:return
         if ratio=="original":vals=(0.,0.,1.,1.)
         else:
             rw,rh=map(float,ratio.split(":")); target=rw/rh
