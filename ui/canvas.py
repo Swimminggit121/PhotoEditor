@@ -6,12 +6,14 @@ from PySide6.QtWidgets import QWidget
 class ImageCanvas(QWidget):
     crop_committed=Signal(float,float,float,float)
     crop_cancelled=Signal()
+    brush_stroke_committed=Signal(list)
 
     def __init__(self,parent=None):
         super().__init__(parent)
         self.image=None; self.before_image=None; self.zoom=1.0; self.offset=QPoint(0,0)
         self.dragging=False; self.last_mouse_position=QPoint(); self.show_before=False
         self.crop_mode=False; self.crop_start=None; self.crop_end=None
+        self.brush_mode=False; self.brush_points=[]
         self.setMinimumSize(500,400); self.setMouseTracking(True)
 
     def set_image(self,image,before_image=None):
@@ -34,6 +36,13 @@ class ImageCanvas(QWidget):
     def zoom_out(self):self.zoom=max(.02,self.zoom/1.2);self.update()
     def reset_view(self):self.fit_image();self.update()
     def toggle_before(self):self.show_before=not self.show_before;self.update()
+
+    def start_brush(self):
+        if self.image is None:return
+        self.brush_mode=True; self.brush_points=[]; self.setCursor(Qt.CrossCursor); self.update()
+
+    def stop_brush(self):
+        self.brush_mode=False; self.brush_points=[]; self.setCursor(Qt.ArrowCursor); self.update()
 
     def start_crop(self):
         if self.image is None:return
@@ -61,18 +70,25 @@ class ImageCanvas(QWidget):
         self.zoom=max(.02,min(20.0,self.zoom));self.update()
 
     def mousePressEvent(self,event):
+        if self.brush_mode and event.button()==Qt.LeftButton:
+            p=self._clamp_to_image(event.position().toPoint());r=self.image_rect();self.brush_points=[((p.x()-r.left())/max(r.width(),1),(p.y()-r.top())/max(r.height(),1))];self.update();return
         if self.crop_mode and event.button()==Qt.LeftButton:
             p=self._clamp_to_image(event.position().toPoint()); self.crop_start=p;self.crop_end=p;self.update();return
         if event.button()==Qt.MiddleButton:
             self.dragging=True;self.last_mouse_position=event.position().toPoint();self.setCursor(Qt.ClosedHandCursor)
 
     def mouseMoveEvent(self,event):
+        if self.brush_mode and event.buttons()&Qt.LeftButton:
+            p=self._clamp_to_image(event.position().toPoint());r=self.image_rect();self.brush_points.append(((p.x()-r.left())/max(r.width(),1),(p.y()-r.top())/max(r.height(),1)));self.update();return
         if self.crop_mode and self.crop_start is not None and event.buttons()&Qt.LeftButton:
             self.crop_end=self._clamp_to_image(event.position().toPoint());self.update();return
         if not self.dragging:return
         current=event.position().toPoint();self.offset+=current-self.last_mouse_position;self.last_mouse_position=current;self.update()
 
     def mouseReleaseEvent(self,event):
+        if self.brush_mode and event.button()==Qt.LeftButton:
+            if self.brush_points:self.brush_stroke_committed.emit(self.brush_points)
+            self.stop_brush();return
         if self.crop_mode and event.button()==Qt.LeftButton and self.crop_start is not None:
             self.crop_end=self._clamp_to_image(event.position().toPoint());values=self._crop_values()
             if values:self.crop_committed.emit(*values)
@@ -82,6 +98,7 @@ class ImageCanvas(QWidget):
 
     def keyPressEvent(self,event):
         if event.key()==Qt.Key_Escape and self.crop_mode:self.cancel_crop();return
+        if event.key()==Qt.Key_Escape and self.brush_mode:self.stop_brush();return
         super().keyPressEvent(event)
 
     def paintEvent(self,event):
