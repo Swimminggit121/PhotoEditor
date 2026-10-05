@@ -10,6 +10,8 @@ from core.document import Document
 from image.export import export_image
 from image.loader import is_supported
 
+EXPORTABLE_EXTENSIONS={".jpg",".jpeg",".png",".tif",".tiff",".webp"}
+
 ProgressCallback = Callable[[int, int, Path], None]
 
 
@@ -82,7 +84,10 @@ class BatchProcessor:
 
                 relative = source.relative_to(self.input_dir) if self.recursive else Path(source.name)
                 destination = self.output_dir / relative
-                destination = destination.with_name(destination.stem + "_edited" + destination.suffix)
+                suffix=destination.suffix.lower()
+                if suffix not in EXPORTABLE_EXTENSIONS:
+                    destination=destination.with_suffix(".jpg")
+                destination=destination.with_name(destination.stem + "_edited" + destination.suffix)
                 destination.parent.mkdir(parents=True, exist_ok=True)
 
                 export_image(document.render(), destination, self.quality)
