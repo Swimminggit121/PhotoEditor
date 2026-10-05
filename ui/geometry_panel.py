@@ -12,7 +12,7 @@ class GeometryPanel(QWidget):
             ("Flip Horizontal",lambda:self.toggle("flip_horizontal")),
             ("Flip Vertical",lambda:self.toggle("flip_vertical"))]:
             b=QPushButton(text);b.clicked.connect(fn);layout.addWidget(b)
-        layout.addWidget(QLabel("Straighten / Rotate"));self.rotation=QSlider(Qt.Horizontal);self.rotation.setRange(-180,180);self.rotation.valueChanged.connect(lambda v:self.on_change("rotation",v,False));layout.addWidget(self.rotation)
+        layout.addWidget(QLabel("Straighten / Rotate"));self.rotation=QSlider(Qt.Horizontal);self.rotation.setRange(-180,180);self.rotation.valueChanged.connect(lambda v:self.on_change("rotation",v,False));self.rotation.sliderReleased.connect(lambda:self.change("rotation",self.rotation.value()));layout.addWidget(self.rotation)
         self.crop_button=QPushButton("Interactive Crop");self.crop_button.clicked.connect(self.crop_requested.emit);layout.addWidget(self.crop_button)
         layout.addWidget(QLabel("Crop Presets"))
         for text,ratio in [("Original","original"),("Square 1:1","1:1"),("Landscape 4:3","4:3"),("Landscape 16:9","16:9"),("Portrait 3:4","3:4")]:
