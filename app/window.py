@@ -5,7 +5,6 @@ from core.document import Document
 from core.auto_grade import auto_colour_grade, auto_edit
 from core.project import save_project as write_project,load_project as read_project
 from image.export import export_image
-from processing.batch import process_folder
 from ui.adjustment_panel import AdjustmentPanel
 from ui.canvas import ImageCanvas
 from ui.histogram import HistogramWidget
@@ -116,18 +115,6 @@ class MainWindow(QMainWindow):
     def batch_auto_edit(self):
         dlg=BatchEditorDialog(self)
         dlg.exec()
-
-    def batch_export(self):
-        input_dir=QFileDialog.getExistingDirectory(self,"Choose Input Folder")
-        if not input_dir:return
-        output_dir=QFileDialog.getExistingDirectory(self,"Choose Output Folder")
-        if not output_dir:return
-        try:
-            results=process_folder(input_dir,output_dir,auto_grade=False,quality=95)
-            self.status_label.setText(f"Batch export complete: {len(results)} images")
-            QMessageBox.information(self,"Batch Export",f"Exported {len(results)} images.")
-        except Exception as exc:
-            QMessageBox.critical(self,"Batch Export failed",str(exc))
 
     def export_image(self):
         if not self.document.has_image():QMessageBox.information(self,"Export","Open an image first.");return
