@@ -2,8 +2,4 @@ PySide6
 numpy
 Pillow
 opencv-python
-scikit-image
-tifffile
-exifread
-scipy
 rawpy
