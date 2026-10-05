@@ -25,10 +25,10 @@ class Document:
         cache=self.preview_cache if preview else self.render_cache
         key=(preview,repr(self.adjustments.to_dict()))
         cached=cache.get(key)
-        if cached is not None:return cached.copy()
+        if cached is not None:return cached
         source=self.preview_source() if preview else self.original_image
         result=render_image(source,self.adjustments)
-        cache.put(key,result.copy())
+        cache.put(key,result)
         return result
     def push_history(self):self.history.push(self.adjustments);self.render_cache.clear();self.preview_cache.clear();self.dirty=True
     def set_adjustment(self,name,value,add_history=True):
@@ -42,6 +42,6 @@ class Document:
     def redo(self):
         state=self.history.redo()
         if state is None:return False
-        self.adjustments=state;self.dirty=True;return True
+        self.adjustments=state;self.render_cache.clear();self.preview_cache.clear();self.dirty=True;return True
     def reset_adjustments(self):self.adjustments.reset();self.render_cache.clear();self.push_history()
     def has_image(self):return self.original_image is not None
