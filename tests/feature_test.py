@@ -34,7 +34,7 @@ def main():
     assert render_image(image,auto).size==(160,100)
 
     with TemporaryDirectory() as tmp:
-        d=Document();d.original_image=image.copy();d.image=image.copy();d.adjustments=a
+        d=Document();d.original_image=image.copy();d.image=image.copy();d.adjustments=a;d._preview_source=None
         p=Path(tmp)/"roundtrip.photoedit";save_project(d,p)
         loaded=Document();load_project(loaded,p)
         assert loaded.adjustments.local_adjustments
@@ -44,3 +44,9 @@ def main():
 
 if __name__=="__main__":
     main()
+
+
+# Exercise the preview render/cache path.
+d=Document();d.original_image=image.copy();d._preview_source=None
+assert d.render(preview=True).size==(160,100)
+assert d.render(preview=True).size==(160,100)
