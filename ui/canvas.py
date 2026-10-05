@@ -44,7 +44,7 @@ class ImageCanvas(QWidget):
 
     def zoom_in(self):self.zoom=min(20.0,self.zoom*1.2);self._invalidate_pixmaps();self.update()
     def zoom_out(self):self.zoom=max(.02,self.zoom/1.2);self._invalidate_pixmaps();self.update()
-    def reset_view(self):self.fit_image();self.update()
+    def reset_view(self):self.fit_image();self._invalidate_pixmaps();self.update()
     def toggle_before(self):self.show_before=not self.show_before;self.update()
 
     def start_brush(self):
