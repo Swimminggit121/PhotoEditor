@@ -1,7 +1,7 @@
 import numpy as np
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPen
+from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import QWidget
 
 
@@ -15,6 +15,7 @@ class HistogramWidget(QWidget):
         self.setMinimumHeight(150)
 
     def set_image(self, image):
+        if image is self.image:return
         self.image = image
         if image is None:
             self.histograms = None
