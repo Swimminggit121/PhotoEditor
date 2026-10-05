@@ -82,13 +82,16 @@ class MainWindow(QMainWindow):
         self.document.dirty=True;self._render_timer.start(35)
     def change_geometry(self,name,value,commit=True):
         setattr(self.document.adjustments,name,value);self.document.dirty=True
-        if commit:self.document.push_history()
-        self.refresh_view()
+        if commit:
+            self.document.push_history()
+            self.refresh_view()
+        else:
+            self._render_timer.start(45)
     def apply_interactive_crop(self,left,top,right,bottom):
         a=self.document.adjustments;a.crop_left=left;a.crop_top=top;a.crop_right=right;a.crop_bottom=bottom
         self.document.push_history();self.refresh_view();self.status_label.setText("Crop applied")
     def mask_changed(self):
-        self.document.dirty=True;self.refresh_render();self.mask_panel.load_selected()
+        self.document.dirty=True;self.mask_panel.load_selected();self._render_timer.start(45)
     def _perform_preview_render(self):
         if not self.document.has_image():return
         rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.preview_source());self.histogram.set_image(rendered);self.update_title()
