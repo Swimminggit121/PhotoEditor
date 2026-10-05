@@ -7,9 +7,9 @@ from image.loader import load_image
 from core.performance import RenderCache
 class Document:
     def __init__(self):
-        self.image=None;self.original_image=None;self.path=None;self.adjustments=Adjustments();self.history=History();self.dirty=False;self.render_cache=RenderCache(2);self.preview_cache=RenderCache(3)
+        self.image=None;self.original_image=None;self.path=None;self.adjustments=Adjustments();self.history=History();self.dirty=False;self.render_cache=RenderCache(2);self.preview_cache=RenderCache(3);self._preview_source=None
     def load(self,path):
-        path=Path(path);image=load_image(path);self.original_image=image.copy();self.image=image.copy();self.path=path;self.adjustments.reset();self.history.clear();self.history.push(self.adjustments);self.render_cache.clear();self.preview_cache.clear();self.dirty=False
+        path=Path(path);image=load_image(path);self.original_image=image.copy();self.image=image.copy();self._preview_source=None;self.path=path;self.adjustments.reset();self.history.clear();self.history.push(self.adjustments);self.render_cache.clear();self.preview_cache.clear();self.dirty=False
     def preview_source(self):
         if self.original_image is None:return None
         if self._preview_source is not None:return self._preview_source
@@ -33,7 +33,7 @@ class Document:
     def push_history(self):self.history.push(self.adjustments);self.render_cache.clear();self.preview_cache.clear();self.dirty=True
     def set_adjustment(self,name,value,add_history=True):
         if not hasattr(self.adjustments,name):raise AttributeError(f"Unknown adjustment: {name}")
-        setattr(self.adjustments,name,float(value));self.render_cache.clear();self.dirty=True
+        setattr(self.adjustments,name,float(value));self.render_cache.clear();self.preview_cache.clear();self.dirty=True
         if add_history:self.push_history()
     def undo(self):
         state=self.history.undo()
