@@ -11,12 +11,14 @@ class Document:
     def load(self,path):
         path=Path(path);image=load_image(path);self.original_image=image.copy();self.image=image.copy();self.path=path;self.adjustments.reset();self.history.clear();self.history.push(self.adjustments);self.render_cache.clear();self.preview_cache.clear();self.dirty=False
     def preview_source(self):
-        image=self.original_image
-        if image is None:return None
-        longest=max(image.size)
-        if longest<=1400:return image
-        scale=1400/longest
-        return image.resize((max(1,int(image.width*scale)),max(1,int(image.height*scale))),Image.Resampling.BILINEAR)
+        if self.original_image is None:return None
+        if self._preview_source is not None:return self._preview_source
+        image=self.original_image;longest=max(image.size)
+        if longest<=1400:self._preview_source=image
+        else:
+            scale=1400/longest
+            self._preview_source=image.resize((max(1,int(image.width*scale)),max(1,int(image.height*scale))),Image.Resampling.BILINEAR)
+        return self._preview_source
 
     def render(self,preview=False):
         if self.original_image is None:return None
@@ -36,7 +38,7 @@ class Document:
     def undo(self):
         state=self.history.undo()
         if state is None:return False
-        self.adjustments=state;self.dirty=True;return True
+        self.adjustments=state;self.render_cache.clear();self.preview_cache.clear();self.dirty=True;return True
     def redo(self):
         state=self.history.redo()
         if state is None:return False
