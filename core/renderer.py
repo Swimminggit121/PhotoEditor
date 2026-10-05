@@ -73,6 +73,8 @@ def _local(a,adjustments):
         a=_clip(original*(1-weights[...,None])+target*weights[...,None])
     return a
 def _transform(a,adj):
+    has_geometry=(adj.flip_horizontal or adj.flip_vertical or abs(float(adj.rotation))>.001 or (adj.crop_left,adj.crop_top,adj.crop_right,adj.crop_bottom)!=(0,0,1,1))
+    if not has_geometry:return a
     out=Image.fromarray(np.round(_clip(a)*255).astype(np.uint8),"RGB")
     if adj.flip_horizontal:out=out.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     if adj.flip_vertical:out=out.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
@@ -98,11 +100,13 @@ def render_image(image,adjustments:Adjustments):
     if any(abs(float(v))>1e-6 for g in grades for v in g.values()) or abs(float(adjustments.grading_blending)-50)>1e-6 or abs(float(adjustments.grading_balance))>1e-6:
         a=apply_colour_grade(a,adjustments.grading_shadows,adjustments.grading_midtones,adjustments.grading_highlights,adjustments.grading_global,adjustments.grading_blending,adjustments.grading_balance)
     a=_detail(a,adjustments.texture,adjustments.clarity,adjustments.dehaze,adjustments.sharpening,adjustments.noise_reduction)
-    a=apply_lens_correction(a,adjustments.lens_correction,adjustments.chromatic_aberration)
-    a=apply_lens_correction(a,adjustments.distortion,0)
+    if adjustments.lens_correction or adjustments.chromatic_aberration:
+        a=apply_lens_correction(a,adjustments.lens_correction,adjustments.chromatic_aberration)
+    if adjustments.distortion:
+        a=apply_lens_correction(a,adjustments.distortion,0)
     a=_grain(a,adjustments.grain);a=_vignette(a,adjustments.vignette)
     a=_local(a,adjustments)
-    a=apply_retouch_spots(a,adjustments.retouch_spots)
+    if adjustments.retouch_spots:a=apply_retouch_spots(a,adjustments.retouch_spots)
     out=_transform(a,adjustments)
     return out if isinstance(original,Image.Image) else np.asarray(out,dtype=np.float32)/255.0
 class Renderer:
