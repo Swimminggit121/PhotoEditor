@@ -108,6 +108,8 @@ def render_image(image,adjustments:Adjustments):
     a=_local(a,adjustments)
     if adjustments.retouch_spots:a=apply_retouch_spots(a,adjustments.retouch_spots)
     out=_transform(a,adjustments)
+    if isinstance(original,Image.Image) and isinstance(out,np.ndarray):
+        return Image.fromarray(np.round(_clip(out)*255).astype(np.uint8),"RGB")
     return out if isinstance(original,Image.Image) else np.asarray(out,dtype=np.float32)/255.0
 class Renderer:
     def render(self,image,adjustments=None,masks=None,preview=False):return render_image(image,adjustments or Adjustments())
