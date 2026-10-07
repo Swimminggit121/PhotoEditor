@@ -18,7 +18,7 @@ def main():
     suite = SuiteWindow()
 
     assert photo.windowTitle().startswith("PhotoEditor")
-    assert video.windowTitle().startswith("Video")
+    assert video.windowTitle().startswith("PhotoEditor Video")
     assert suite.windowTitle() == "PhotoEditor Suite"
     assert suite.centralWidget() is not None
     assert suite.centralWidget().count() == 2
