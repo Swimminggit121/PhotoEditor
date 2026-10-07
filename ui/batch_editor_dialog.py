@@ -44,6 +44,7 @@ class BatchEditorDialog(QDialog):
         self.mode = QComboBox()
         self.mode.addItem("Full Auto Edit", "auto_edit")
         self.mode.addItem("Auto Colour Grade", "auto_grade")
+        self.mode.addItem("Auto Edit + Consistent Style", "auto_consistent")
         self.mode.addItem("Current Preset", "preset")
         self.mode.addItem("Reference Style", "reference")
 
