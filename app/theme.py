@@ -95,6 +95,27 @@ def apply_theme(app):
             font-weight: bold;
         }
 
+        QGroupBox {
+            border: 1px solid #333333;
+            border-radius: 6px;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: 600;
+        }
+
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            left: 8px;
+            padding: 0 6px;
+        }
+
+        QLineEdit, QComboBox, QListWidget {
+            background-color: #1d1d1d;
+            border: 1px solid #353535;
+            border-radius: 4px;
+            padding: 6px;
+        }
+
         QSlider::groove:horizontal {
             height: 4px;
             background: #444444;

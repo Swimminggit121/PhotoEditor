@@ -1,5 +1,8 @@
 PySide6
 numpy
 Pillow
+tifffile
 opencv-python
 rawpy
+imageio-ffmpeg>=0.6.0
+keyring>=25.0

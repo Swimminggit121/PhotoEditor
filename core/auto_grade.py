@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 import numpy as np
+from PIL import Image
 
 from core.adjustment_stack import Adjustments
 
 
+def _clip01(value):
+    return float(np.clip(value, -100.0, 100.0))
+
+
 def _rgb(image):
-    a=np.asarray(image.convert("RGB") if hasattr(image,"convert") else image,dtype=np.float32)
-    if a.max()>1: a/=255.0
+    source=np.asarray(image.convert("RGB") if hasattr(image,"convert") else image)
+    if np.issubdtype(source.dtype,np.integer):
+        a=source.astype(np.float32)/float(np.iinfo(source.dtype).max)
+    else:
+        a=source.astype(np.float32)
+        if a.size and a.max()>1: a/=255.0
     return np.clip(a[...,:3],0,1)
 
 
@@ -15,12 +24,29 @@ def _luma(a):
     return a[...,0]*0.2126+a[...,1]*0.7152+a[...,2]*0.0722
 
 
+def _analysis_sample(image, max_size=1400):
+    if isinstance(image, Image.Image):
+        longest = max(image.size)
+        if longest > max_size:
+            scale = max_size / longest
+            return image.resize(
+                (max(1, int(image.width * scale)), max(1, int(image.height * scale))),
+                Image.Resampling.BILINEAR,
+            )
+    elif isinstance(image, np.ndarray) and image.ndim >= 2:
+        longest = max(image.shape[:2])
+        if longest > max_size:
+            step = int(np.ceil(longest / max_size))
+            return image[::step, ::step]
+    return image
+
+
 def _curve(points):
     return [(float(x),float(y)) for x,y in points]
 
 
 def auto_colour_grade(image, base=None):
-    a=_rgb(image)
+    a=_rgb(_analysis_sample(image))
     lum=_luma(a)
     p1,p5,p50,p95,p99=np.percentile(lum,[1,5,50,95,99])
     mean=float(lum.mean())
@@ -95,10 +121,81 @@ def auto_colour_grade(image, base=None):
     return adj
 
 
-def auto_edit(image, base=None):
+def _profile_for_image(image, file_kind="generic"):
+    if file_kind == "raw":
+        return {
+            "exposure": 10.0,
+            "contrast": 12.0,
+            "highlights": -10.0,
+            "shadows": 18.0,
+            "whites": 12.0,
+            "blacks": -8.0,
+            "texture": 10.0,
+            "clarity": 10.0,
+            "dehaze": 8.0,
+            "sharpening": 22.0,
+            "noise_reduction": 12.0,
+            "vignette": 6.0,
+        }
+    if file_kind in {"jpeg", "png", "tif", "tiff", "webp"}:
+        return {
+            "exposure": 4.0,
+            "contrast": 8.0,
+            "highlights": -8.0,
+            "shadows": 12.0,
+            "whites": 6.0,
+            "blacks": -4.0,
+            "texture": 6.0,
+            "clarity": 8.0,
+            "dehaze": 4.0,
+            "sharpening": 14.0,
+            "noise_reduction": 6.0,
+            "vignette": 4.0,
+        }
+    return {
+        "exposure": 6.0,
+        "contrast": 10.0,
+        "highlights": -6.0,
+        "shadows": 10.0,
+        "whites": 8.0,
+        "blacks": -6.0,
+        "texture": 8.0,
+        "clarity": 8.0,
+        "dehaze": 6.0,
+        "sharpening": 16.0,
+        "noise_reduction": 8.0,
+        "vignette": 5.0,
+    }
+
+
+def auto_professional_edit(image, base=None, file_kind="generic"):
+    """Create a polished, production-ready develop style tuned for the input type."""
+    adj = auto_colour_grade(image, base)
+    profile = _profile_for_image(image, file_kind)
+
+    for field, value in profile.items():
+        if hasattr(adj, field):
+            current = float(getattr(adj, field))
+            setattr(adj, field, _clip01(current + value))
+
+    if file_kind == "raw":
+        adj.temperature = _clip01(adj.temperature + 8.0)
+        adj.tint = _clip01(adj.tint + 4.0)
+        adj.grading_blending = float(np.clip(adj.grading_blending + 8.0, 30.0, 65.0))
+    elif file_kind in {"jpeg", "png", "tif", "tiff", "webp"}:
+        adj.temperature = _clip01(adj.temperature + 4.0)
+        adj.vibrance = _clip01(adj.vibrance + 6.0)
+        adj.grading_blending = float(np.clip(adj.grading_blending + 4.0, 30.0, 65.0))
+    else:
+        adj.vibrance = _clip01(adj.vibrance + 2.0)
+
+    return adj
+
+
+def auto_edit(image, base=None, file_kind="generic"):
     """Create a complete restrained develop-grade from image statistics.
 
     The result is an ordinary Adjustments object, so every automatically chosen
     value remains editable in the normal Develop controls.
     """
-    return auto_colour_grade(image, base)
+    return auto_professional_edit(image, base, file_kind)

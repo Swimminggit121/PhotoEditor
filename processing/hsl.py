@@ -1,4 +1,4 @@
-import colorsys
+import cv2
 import numpy as np
 
 
@@ -52,161 +52,13 @@ def channel_weight(hue, centre, width=30.0):
 
 
 def rgb_to_hsv_array(image):
-    maximum = np.max(
-        image,
-        axis=-1
-    )
-
-    minimum = np.min(
-        image,
-        axis=-1
-    )
-
-    delta = maximum - minimum
-
-    value = maximum
-
-    saturation = np.zeros_like(
-        maximum
-    )
-
-    non_zero = maximum != 0
-
-    saturation[non_zero] = (
-        delta[non_zero]
-        / maximum[non_zero]
-    )
-
-    hue = np.zeros_like(
-        maximum
-    )
-
-    mask = delta != 0
-
-    red = image[..., 0]
-    green = image[..., 1]
-    blue = image[..., 2]
-
-    red_mask = (
-        mask
-        & (maximum == red)
-    )
-
-    green_mask = (
-        mask
-        & (maximum == green)
-    )
-
-    blue_mask = (
-        mask
-        & (maximum == blue)
-    )
-
-    hue[red_mask] = (
-        60.0
-        * (
-            (green[red_mask] - blue[red_mask])
-            / delta[red_mask]
-        )
-    )
-
-    hue[green_mask] = (
-        60.0
-        * (
-            (blue[green_mask] - red[green_mask])
-            / delta[green_mask]
-        )
-        + 120.0
-    )
-
-    hue[blue_mask] = (
-        60.0
-        * (
-            (red[blue_mask] - green[blue_mask])
-            / delta[blue_mask]
-        )
-        + 240.0
-    )
-
-    hue %= 360.0
-
-    return hue, saturation, value
+    hsv = cv2.cvtColor(np.ascontiguousarray(image, dtype=np.float32), cv2.COLOR_RGB2HSV)
+    return hsv[..., 0], hsv[..., 1], hsv[..., 2]
 
 
 def hsv_to_rgb_array(hue, saturation, value):
-    h = hue / 60.0
-
-    c = value * saturation
-
-    x = c * (
-        1.0
-        - np.abs(
-            (h % 2.0) - 1.0
-        )
-    )
-
-    m = value - c
-
-    r = np.zeros_like(hue)
-    g = np.zeros_like(hue)
-    b = np.zeros_like(hue)
-
-    mask = (
-        (h >= 0)
-        & (h < 1)
-    )
-
-    r[mask] = c[mask]
-    g[mask] = x[mask]
-
-    mask = (
-        (h >= 1)
-        & (h < 2)
-    )
-
-    r[mask] = x[mask]
-    g[mask] = c[mask]
-
-    mask = (
-        (h >= 2)
-        & (h < 3)
-    )
-
-    g[mask] = c[mask]
-    b[mask] = x[mask]
-
-    mask = (
-        (h >= 3)
-        & (h < 4)
-    )
-
-    g[mask] = x[mask]
-    b[mask] = c[mask]
-
-    mask = (
-        (h >= 4)
-        & (h < 5)
-    )
-
-    r[mask] = x[mask]
-    b[mask] = c[mask]
-
-    mask = (
-        (h >= 5)
-        & (h < 6)
-    )
-
-    r[mask] = c[mask]
-    b[mask] = x[mask]
-
-    r += m
-    g += m
-    b += m
-
-    return np.stack(
-        [r, g, b],
-        axis=-1
-    )
+    hsv = np.stack((hue, saturation, value), axis=-1).astype(np.float32, copy=False)
+    return cv2.cvtColor(np.ascontiguousarray(hsv), cv2.COLOR_HSV2RGB)
 
 
 def apply_hsl(image, hsl):
@@ -217,8 +69,10 @@ def apply_hsl(image, hsl):
         rgb_to_hsv_array(image)
     )
 
-    original_hue = hue.copy()
-
+    hue_adjustments = np.zeros(360, dtype=np.float32)
+    saturation_adjustments = np.zeros(360, dtype=np.float32)
+    value_adjustments = np.zeros(360, dtype=np.float32)
+    sample_hues = np.arange(360, dtype=np.float32)
     for channel in CHANNELS:
         settings = hsl.get(
             channel,
@@ -240,33 +94,30 @@ def apply_hsl(image, hsl):
             0.0
         )
 
-        centre = CHANNEL_HUES[
-            channel
-        ]
+        if not (hue_shift or saturation_shift or luminance_shift):
+            continue
 
-        weight = channel_weight(
-            original_hue,
-            centre,
-            30.0
-        )
+        weight = channel_weight(sample_hues, CHANNEL_HUES[channel], 30.0)
+        hue_adjustments += weight * hue_shift
+        saturation_adjustments += weight * saturation_shift / 100.0
+        value_adjustments += weight * luminance_shift / 100.0
 
-        hue += (
-            weight
-            * hue_shift
-        )
-
-        saturation += (
-            weight
-            * saturation_shift
-            / 100.0
-        )
-
-        value += (
-            weight
-            * luminance_shift
-            / 100.0
-        )
-
+    hue_floor = np.floor(hue)
+    hue_low = hue_floor.astype(np.int32) % 360
+    hue_high = (hue_low + 1) % 360
+    hue_fraction = hue - hue_floor
+    hue += (
+        hue_adjustments[hue_low] * (1.0 - hue_fraction)
+        + hue_adjustments[hue_high] * hue_fraction
+    )
+    saturation += (
+        saturation_adjustments[hue_low] * (1.0 - hue_fraction)
+        + saturation_adjustments[hue_high] * hue_fraction
+    )
+    value += (
+        value_adjustments[hue_low] * (1.0 - hue_fraction)
+        + value_adjustments[hue_high] * hue_fraction
+    )
     hue %= 360.0
 
     saturation = np.clip(

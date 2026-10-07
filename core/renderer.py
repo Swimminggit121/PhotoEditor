@@ -11,7 +11,12 @@ from masks.raster import rasterize_mask
 
 def _array(image):
     if isinstance(image,Image.Image): return np.asarray(image.convert("RGB"),dtype=np.float32)/255.0
-    a=np.asarray(image,dtype=np.float32)
+    source=np.asarray(image)
+    if np.issubdtype(source.dtype,np.integer):
+        scale=float(np.iinfo(source.dtype).max)
+        a=source.astype(np.float32)/scale
+    else:
+        a=source.astype(np.float32)
     if a.ndim==2:a=np.repeat(a[...,None],3,axis=2)
     if a.shape[-1]==4:a=a[...,:3]
     if a.size and a.max()>1:a/=255.0
@@ -75,15 +80,22 @@ def _local(a,adjustments):
 def _transform(a,adj):
     has_geometry=(adj.flip_horizontal or adj.flip_vertical or abs(float(adj.rotation))>.001 or (adj.crop_left,adj.crop_top,adj.crop_right,adj.crop_bottom)!=(0,0,1,1))
     if not has_geometry:return a
-    out=Image.fromarray(np.round(_clip(a)*255).astype(np.uint8),"RGB")
-    if adj.flip_horizontal:out=out.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-    if adj.flip_vertical:out=out.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
-    if abs(adj.rotation)>.001:out=out.rotate(float(adj.rotation),resample=Image.Resampling.BICUBIC,expand=True,fillcolor=(0,0,0))
-    w,h=out.size;l,t,r,b=adj.crop_left,adj.crop_top,adj.crop_right,adj.crop_bottom
+    planes = [
+        Image.fromarray(_clip(a[..., channel]).astype(np.float32), "F")
+        for channel in range(3)
+    ]
+    transformed = []
+    for plane in planes:
+        if adj.flip_horizontal:plane=plane.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        if adj.flip_vertical:plane=plane.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+        if abs(adj.rotation)>.001:plane=plane.rotate(float(adj.rotation),resample=Image.Resampling.BICUBIC,expand=True,fillcolor=0.0)
+        transformed.append(plane)
+    w,h=transformed[0].size;l,t,r,b=adj.crop_left,adj.crop_top,adj.crop_right,adj.crop_bottom
     if (l,t,r,b)!=(0,0,1,1):
         box=(max(0,int(l*w)),max(0,int(t*h)),min(w,int(r*w)),min(h,int(b*h)))
-        if box[2]>box[0] and box[3]>box[1]:out=out.crop(box)
-    return out
+        if box[2]>box[0] and box[3]>box[1]:
+            transformed=[plane.crop(box) for plane in transformed]
+    return np.stack([np.asarray(plane,dtype=np.float32) for plane in transformed],axis=-1)
 def render_image(image,adjustments:Adjustments):
     original=image;a=_array(image)
     if adjustments.exposure:a=_exposure(a,adjustments.exposure)
@@ -110,6 +122,6 @@ def render_image(image,adjustments:Adjustments):
     out=_transform(a,adjustments)
     if isinstance(original,Image.Image) and isinstance(out,np.ndarray):
         return Image.fromarray(np.round(_clip(out)*255).astype(np.uint8),"RGB")
-    return out if isinstance(original,Image.Image) else np.asarray(out,dtype=np.float32)/255.0
+    return out if isinstance(original,Image.Image) else np.asarray(_clip(out),dtype=np.float32)
 class Renderer:
     def render(self,image,adjustments=None,masks=None,preview=False):return render_image(image,adjustments or Adjustments())

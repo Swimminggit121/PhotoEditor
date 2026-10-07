@@ -40,7 +40,8 @@ def apply_curve_channel(
     lookup_values = np.linspace(
         0.0,
         1.0,
-        4096
+        65536,
+        dtype=np.float32,
     )
 
     lookup = interpolate_curve(

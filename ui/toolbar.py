@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QToolBar
 class MainToolBar(QToolBar):
     def __init__(self,window):
         super().__init__("Main Toolbar",window);self.setMovable(False)
-        for text,slot in [("Open",window.open_image),("Open Project",window.open_project),("Save Project",window.save_project),("Batch Auto Edit",window.batch_auto_edit),("Auto Edit",window.auto_edit),("Auto Colour Grade",window.auto_grade),("Export",window.export_image)]:
+        for text,slot in [("Catalog",window.open_catalog),("Open",window.open_image),("Professional Batch",window.batch_auto_edit),("Auto Edit",window.auto_edit),("Export",window.export_image),("Open Project",window.open_project),("Save Project",window.save_project),("Save Preset",window.save_current_preset),("Manage Presets",window.manage_presets),("Reel Montage",window.create_video_montage),("Auto Colour Grade",window.auto_grade),("100% Detail",window.view_full_resolution)]:
             a=QAction(text,self);a.triggered.connect(slot);self.addAction(a)
         self.addSeparator()
         for text,slot in [("Zoom +",window.zoom_in),("Zoom -",window.zoom_out),("Fit",window.fit_image)]:

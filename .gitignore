@@ -9,11 +9,13 @@ env/
 .vscode/
 
 *.photoedit
+*.videoedit
 *.tmp
 
 build/
 dist/
 *.egg-info/
+*.spec
 
 .pytest_cache/
 .mypy_cache/

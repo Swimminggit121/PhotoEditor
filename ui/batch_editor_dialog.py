@@ -4,23 +4,28 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
+    QApplication,
     QLabel,
     QLineEdit,
     QMessageBox,
     QProgressBar,
     QPushButton,
-    QCheckBox,
+    QScrollArea,
     QVBoxLayout,
+    QWidget,
 )
 
 from core.batch_processor import BatchProcessor
 from core.style_match import build_style_profile
+from image.loader import is_supported
 from presets.manager import load_preset
 
 
@@ -47,12 +52,21 @@ class BatchEditorDialog(QDialog):
         self.processor = None
         self.thread = None
         self.worker = None
-        self.setWindowTitle("Batch Auto Edit")
-        self.setMinimumWidth(620)
+        self.setWindowTitle("Professional Batch Edit")
+        self.setMinimumSize(620, 420)
+        screen = QApplication.primaryScreen()
+        available = screen.availableGeometry() if screen else None
+        self.resize(760, min(680, available.height() - 80) if available else 680)
 
         self.input_edit = QLineEdit()
+        self.input_edit.setReadOnly(True)
+        self.input_edit.setPlaceholderText("Choose a folder containing your photos")
         self.output_edit = QLineEdit()
+        self.output_edit.setReadOnly(True)
+        self.output_edit.setPlaceholderText("Choose where edited copies should be saved")
+        self.photo_count = QLabel("Choose a photo folder to begin.")
         self.mode = QComboBox()
+        self.mode.addItem("Professional Auto Edit", "professional")
         self.mode.addItem("Full Auto Edit", "auto_edit")
         self.mode.addItem("Auto Colour Grade", "auto_grade")
         self.mode.addItem("Current Preset", "preset")
@@ -63,64 +77,87 @@ class BatchEditorDialog(QDialog):
         self.quality.setCurrentText("95")
         self.recursive = QCheckBox("Include subfolders")
         self.preset_edit = QLineEdit()
-        self.reference_label = QLabel("Uses the currently edited photo as the reference style.")
+        self.preset_edit.setPlaceholderText("Select a saved preset JSON file")
+        self.preset_button = None
+        self.reference_label = QLabel("Uses the currently active photo as the reference style for the whole batch.")
+        self.reference_label.setWordWrap(True)
         self.progress = QProgressBar()
-        self.status = QLabel("Choose an input and output folder.")
-        self.start_button = QPushButton("Start")
+        self.status = QLabel("Choose an input folder and output folder to prepare a professional upload set.")
+        self.status.setWordWrap(True)
+        self.start_button = QPushButton("Start Batch")
+        self.start_button.setDefault(True)
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setEnabled(False)
 
-        form = QFormLayout()
-        form.addRow("Input folder", self._browse_row(self.input_edit, True))
-        form.addRow("Output folder", self._browse_row(self.output_edit, False))
-        form.addRow("Editing mode", self.mode)
-        form.addRow("JPEG quality", self.quality)
-        form.addRow("", self.recursive)
-        form.addRow("Preset JSON", self._preset_row())
-        form.addRow("Reference", self.reference_label)
+        folders = QGroupBox("Folders")
+        folders_layout = QFormLayout(folders)
+        folders_layout.addRow("Photo folder", self._browse_row(self.input_edit, True))
+        folders_layout.addRow("", self.photo_count)
+        folders_layout.addRow("Output folder", self._browse_row(self.output_edit, False))
+
+        style_box = QGroupBox("Edit profile")
+        style_layout = QFormLayout(style_box)
+        style_layout.addRow("Processing mode", self.mode)
+        style_layout.addRow("Export quality", self.quality)
+        style_layout.addRow("", self.recursive)
+        style_layout.addRow("Preset JSON", self._preset_row())
+        style_layout.addRow("Reference", self.reference_label)
 
         buttons = QDialogButtonBox()
         buttons.addButton(self.start_button, QDialogButtonBox.AcceptRole)
         buttons.addButton(self.cancel_button, QDialogButtonBox.RejectRole)
         buttons.rejected.connect(self.cancel)
 
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.addWidget(folders)
+        content_layout.addWidget(style_box)
+        content_layout.addStretch()
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setWidget(content)
+
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
+        layout.addWidget(scroll, 1)
         layout.addWidget(self.status)
         layout.addWidget(self.progress)
         layout.addWidget(buttons)
 
         self.mode.currentIndexChanged.connect(self._update_mode_ui)
+        self.recursive.toggled.connect(self._update_photo_count)
         self.start_button.clicked.connect(self.start)
         self._update_mode_ui()
 
     def _browse_row(self, edit, input_folder):
-        row = QHBoxLayout()
-        button = QPushButton("Browse...")
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        button = QPushButton("Choose Photos Folder..." if input_folder else "Choose Output Folder...")
         button.clicked.connect(lambda: self._browse_folder(edit, input_folder))
         row.addWidget(edit)
         row.addWidget(button)
-        wrapper = QHBoxLayout()
-        wrapper.addLayout(row)
-        container = QLabel()
-        container.setLayout(wrapper)
         return container
 
     def _browse_folder(self, edit, input_folder):
-        path = QFileDialog.getExistingDirectory(self, "Choose Folder")
+        title = "Choose Photo Folder" if input_folder else "Choose Output Folder"
+        path = QFileDialog.getExistingDirectory(self, title)
         if path:
             edit.setText(path)
             if input_folder and not self.output_edit.text():
                 edit_path = Path(path)
                 self.output_edit.setText(str(edit_path.parent / (edit_path.name + "_edited")))
+            self._update_photo_count()
 
     def _preset_row(self):
+        container = QWidget()
         row = QHBoxLayout()
-        button = QPushButton("Choose...")
-        button.clicked.connect(self.choose_preset)
+        row.setContentsMargins(0, 0, 0, 0)
+        self.preset_button = QPushButton("Choose Preset...")
+        self.preset_button.clicked.connect(self.choose_preset)
         row.addWidget(self.preset_edit)
-        row.addWidget(button)
-        container = QLabel()
+        row.addWidget(self.preset_button)
         container.setLayout(row)
         return container
 
@@ -132,16 +169,31 @@ class BatchEditorDialog(QDialog):
             self.preset_edit.setText(path)
 
     def _update_mode_ui(self):
-        self.preset_edit.setEnabled(self.mode.currentData() == "preset")
+        enabled = self.mode.currentData() == "preset"
+        self.preset_edit.setEnabled(enabled)
+        self.preset_button.setEnabled(enabled)
+
+    def _update_photo_count(self):
+        input_dir = Path(self.input_edit.text()) if self.input_edit.text() else None
+        if input_dir is None or not input_dir.is_dir():
+            self.photo_count.setText("Choose a photo folder to begin.")
+            return
+        iterator = input_dir.rglob("*") if self.recursive.isChecked() else input_dir.iterdir()
+        supported = sum(1 for path in iterator if path.is_file() and is_supported(path))
+        self.photo_count.setText(f"{supported} supported photo{'s' if supported != 1 else ''} found.")
 
     def start(self):
         input_dir = Path(self.input_edit.text().strip())
-        output_dir = Path(self.output_edit.text().strip())
+        output_text = self.output_edit.text().strip()
+        output_dir = Path(output_text) if output_text else None
         if not input_dir.is_dir():
-            QMessageBox.warning(self, "Batch Auto Edit", "Choose a valid input folder.")
+            QMessageBox.warning(self, "Professional Batch Edit", "Choose a valid photo folder.")
             return
-        if not output_dir:
-            QMessageBox.warning(self, "Batch Auto Edit", "Choose an output folder.")
+        if output_dir is None:
+            QMessageBox.warning(self, "Professional Batch Edit", "Choose an output folder.")
+            return
+        if input_dir.resolve() == output_dir.resolve():
+            QMessageBox.warning(self, "Professional Batch Edit", "Choose a separate output folder so your source photos stay untouched.")
             return
 
         mode = self.mode.currentData()
@@ -169,7 +221,7 @@ class BatchEditorDialog(QDialog):
             )
             total = len(self.processor.files())
             if total == 0:
-                QMessageBox.information(self, "Batch Auto Edit", "No supported photos were found.")
+                QMessageBox.information(self, "Professional Batch Edit", "No supported photos were found in the selected folder.")
                 return
 
             self.progress.setRange(0, total)
@@ -186,6 +238,7 @@ class BatchEditorDialog(QDialog):
             self.worker.finished.connect(self.finished)
             self.worker.finished.connect(self.thread.quit)
             self.thread.finished.connect(self.thread.deleteLater)
+            self.thread.finished.connect(self.worker.deleteLater)
             self.thread.start()
         except Exception as exc:
             QMessageBox.critical(self, "Batch Auto Edit", str(exc))

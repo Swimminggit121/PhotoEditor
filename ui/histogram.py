@@ -1,7 +1,7 @@
 import numpy as np
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QWidget
 
 
@@ -61,26 +61,9 @@ class HistogramWidget(QWidget):
 
             painter.setPen(pen)
 
-            previous = None
-
-            for x in range(width):
-                index = int(
-                    x / width * 255
-                )
-
-                y = height - int(
-                    histogram[index]
-                ) - 5
-
-                if previous is not None:
-                    painter.drawLine(
-                        previous[0],
-                        previous[1],
-                        x,
-                        y
-                    )
-
-                previous = (
-                    x,
-                    y
-                )
+            points = QPolygonF()
+            for x, value in enumerate(histogram):
+                px = x / 255 * max(0, width - 1)
+                py = height - int(value) - 5
+                points.append(QPointF(px, py))
+            painter.drawPolyline(points)

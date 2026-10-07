@@ -6,6 +6,7 @@ from PySide6.QtGui import (
     QColor,
     QPainter,
     QPen,
+    QPixmap,
 )
 from PySide6.QtWidgets import QWidget
 
@@ -22,6 +23,7 @@ class ColourWheel(QWidget):
         self.saturation = 0.0
 
         self.on_change = on_change
+        self._wheel_pixmap = None
 
         self.setMinimumSize(
             160,
@@ -29,90 +31,37 @@ class ColourWheel(QWidget):
         )
 
     def paintEvent(self, event):
-        painter = QPainter(
-            self
-        )
-
-        painter.setRenderHint(
-            QPainter.Antialiasing
-        )
-
-        centre = QPointF(
-            self.width() / 2,
-            self.height() / 2
-        )
-
-        radius = min(
-            self.width(),
-            self.height()
-        ) / 2 - 10
-
-        for angle in range(360):
-            hue = angle
-
-            colour = QColor.fromHsv(
-                hue,
-                255,
-                255
-            )
-
-            painter.setPen(
-                QPen(
-                    colour,
-                    3
+        size = self.size()
+        if self._wheel_pixmap is None or self._wheel_pixmap.size() != size:
+            self._wheel_pixmap = QPixmap(size)
+            self._wheel_pixmap.fill(Qt.transparent)
+            wheel_painter = QPainter(self._wheel_pixmap)
+            wheel_painter.setRenderHint(QPainter.Antialiasing)
+            centre = QPointF(self.width() / 2, self.height() / 2)
+            radius = min(self.width(), self.height()) / 2 - 10
+            for angle in range(360):
+                wheel_painter.setPen(QPen(QColor.fromHsv(angle, 255, 255), 3))
+                radians = math.radians(angle)
+                inner = QPointF(
+                    centre.x() + math.cos(radians) * radius * 0.35,
+                    centre.y() + math.sin(radians) * radius * 0.35,
                 )
-            )
-
-            radians = math.radians(
-                angle
-            )
-
-            inner = QPointF(
-                centre.x()
-                + math.cos(radians)
-                * radius
-                * 0.35,
-
-                centre.y()
-                + math.sin(radians)
-                * radius
-                * 0.35
-            )
-
-            outer = QPointF(
-                centre.x()
-                + math.cos(radians)
-                * radius,
-
-                centre.y()
-                + math.sin(radians)
-                * radius
-            )
-
-            painter.drawLine(
-                inner,
-                outer
-            )
-
-        painter.setBrush(
-            QBrush(
-                QColor(
-                    40,
-                    40,
-                    40
+                outer = QPointF(
+                    centre.x() + math.cos(radians) * radius,
+                    centre.y() + math.sin(radians) * radius,
                 )
-            )
-        )
+                wheel_painter.drawLine(inner, outer)
+            wheel_painter.setBrush(QBrush(QColor(40, 40, 40)))
 
-        painter.setPen(
-            Qt.NoPen
-        )
+            wheel_painter.setPen(Qt.NoPen)
+            wheel_painter.drawEllipse(centre, radius * 0.35, radius * 0.35)
+            wheel_painter.end()
 
-        painter.drawEllipse(
-            centre,
-            radius * 0.35,
-            radius * 0.35
-        )
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.drawPixmap(0, 0, self._wheel_pixmap)
+        centre = QPointF(self.width() / 2, self.height() / 2)
+        radius = min(self.width(), self.height()) / 2 - 10
 
         radians = math.radians(
             self.hue

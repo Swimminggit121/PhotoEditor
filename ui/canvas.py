@@ -15,17 +15,24 @@ class ImageCanvas(QWidget):
         self.crop_mode=False; self.crop_start=None; self.crop_end=None
         self.brush_mode=False; self.brush_points=[]
         self._pixmap=None; self._before_pixmap=None; self._scaled_pixmap=None; self._scaled_before_pixmap=None
-        self.setMinimumSize(500,400); self.setMouseTracking(True)
+        self.setMinimumSize(320,240); self.setMouseTracking(True)
 
     def _invalidate_pixmaps(self):
         self._scaled_pixmap=None;self._scaled_before_pixmap=None
 
     def set_image(self,image,before_image=None):
+        image_changed=image is not self.image
+        before_changed=before_image is not self.before_image
+        size_changed=(image is not None and self.image is not None and image.size != self.image.size)
         self.image=image;self.before_image=before_image
-        self._pixmap=QPixmap.fromImage(ImageQt(image)) if image is not None else None
-        self._before_pixmap=QPixmap.fromImage(ImageQt(before_image)) if before_image is not None else None
-        self._invalidate_pixmaps()
-        if not self.crop_mode:self.fit_image()
+        if image_changed:
+            self._pixmap=QPixmap.fromImage(ImageQt(image)) if image is not None else None
+            self._scaled_pixmap=None
+        if before_changed:
+            self._before_pixmap=QPixmap.fromImage(ImageQt(before_image)) if before_image is not None else None
+            self._scaled_before_pixmap=None
+        if image_changed and (before_changed or size_changed or self._pixmap is None):
+            if not self.crop_mode:self.fit_image()
         self.update()
 
     def resizeEvent(self,event):
