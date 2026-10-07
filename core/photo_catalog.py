@@ -89,19 +89,45 @@ def _exif_metadata(path: Path) -> tuple[str, str, str, int, int]:
 
         with rawpy.imread(str(path)) as raw:
             size = raw.sizes
-            metadata = raw.metadata
-            camera = " ".join(
-                str(getattr(metadata, field, "") or "").strip()
-                for field in ("make", "model")
-            ).strip()
-            lens = str(
-                getattr(metadata, "lens_model", "")
-                or getattr(metadata, "lens", "")
-                or ""
-            ).strip()
-            timestamp = getattr(metadata, "timestamp", None)
-            captured = timestamp.isoformat(sep=" ") if isinstance(timestamp, datetime) else ""
-            return captured, camera, lens, int(size.width), int(size.height)
+            width, height = int(size.width), int(size.height)
+        try:
+            with Image.open(path) as source:
+                exif = source.getexif()
+                tags = {
+                    ExifTags.TAGS.get(key, str(key)): value
+                    for key, value in exif.items()
+                }
+                try:
+                    nested = exif.get_ifd(ExifTags.IFD.Exif)
+                except (AttributeError, KeyError, TypeError):
+                    nested = {}
+                tags.update({
+                    ExifTags.TAGS.get(key, str(key)): value
+                    for key, value in nested.items()
+                })
+                captured = str(
+                    tags.get("DateTimeOriginal")
+                    or tags.get("DateTimeDigitized")
+                    or tags.get("DateTime")
+                    or ""
+                )
+                if captured:
+                    try:
+                        captured = datetime.strptime(
+                            captured, "%Y:%m:%d %H:%M:%S"
+                        ).isoformat(sep=" ")
+                    except ValueError:
+                        pass
+                camera = " ".join(
+                    str(tags.get(name, "")).strip()
+                    for name in ("Make", "Model")
+                ).strip()
+                lens = str(
+                    tags.get("LensModel") or tags.get("LensSpecification") or ""
+                ).strip()
+        except (OSError, ValueError, SyntaxError):
+            captured, camera, lens = "", "", ""
+        return captured, camera, lens, width, height
     with Image.open(path) as source:
         exif = source.getexif()
         tags = {ExifTags.TAGS.get(key, str(key)): value for key, value in exif.items()}

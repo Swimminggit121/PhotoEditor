@@ -3,7 +3,7 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 from PIL import ImageCms, ImageOps
-from image.raw import load_raw_pixels
+from image.raw import load_raw, load_raw_pixels
 
 RAWS={".cr2",".cr3",".nef",".nrw",".arw",".srf",".sr2",".dng",".raf",".orf",".rw2",".pef",".srw",".3fr",".iiq",".rwl",".raw",".dcr",".kdc",".mrw",".x3f",".erf",".mef",".mos",".fff"}
 RASTER={".jpg",".jpeg",".png",".tif",".tiff",".webp",".bmp",".gif"}

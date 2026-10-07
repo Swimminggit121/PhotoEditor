@@ -85,8 +85,23 @@ def main():
         photo = catalog.photos(shoot_id)[0]
         catalog.update_photo(photo.id, rating=4, status="pick", keywords="portraits, studio")
         catalog_window = PhotoCatalogWindow(catalog=catalog)
+        catalog_window.resize(1050, 650)
+        catalog_window.show()
+        app.processEvents()
+        assert catalog_window.detail_scroll.widget() is not None
+        assert catalog_window.preview.height() == 360
         assert catalog_window.table.rowCount() == 1
         assert catalog_window.table.columnCount() == 7
+        opened_from_double_click = []
+        catalog_window.photo_selected.connect(opened_from_double_click.append)
+        catalog_window.table.selectRow(0)
+        catalog_window.table.cellDoubleClicked.emit(0, 2)
+        assert opened_from_double_click == [str(photo_path.resolve())]
+        preview_deadline = time.monotonic() + 10
+        while catalog_window._preview_workers and time.monotonic() < preview_deadline:
+            app.processEvents()
+            time.sleep(0.01)
+        assert not catalog_window._preview_pixmap.isNull()
         catalog_window.search.setText("studio")
         app.processEvents()
         assert catalog_window.table.rowCount() == 1

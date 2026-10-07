@@ -16,7 +16,9 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSplitter,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -116,6 +118,7 @@ class PhotoCatalogWindow(QMainWindow):
         self._worker: QThread | None = None
         self._preview_workers: set[_PreviewWorker] = set()
         self._preview_generation = 0
+        self._preview_pixmap = QPixmap()
         self._busy = False
 
         heading = QLabel("Photo Catalog")
@@ -195,7 +198,9 @@ class PhotoCatalogWindow(QMainWindow):
 
         self.preview = QLabel("Select a photo to inspect it.")
         self.preview.setAlignment(Qt.AlignCenter)
-        self.preview.setMinimumSize(360, 320)
+        self.preview.setMinimumSize(320, 280)
+        self.preview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.preview.setFixedHeight(360)
         self.preview.setStyleSheet("background: #101010; border: 1px solid #343434;")
         self.photo_title = QLabel("No photo selected")
         self.photo_title.setWordWrap(True)
@@ -246,11 +251,15 @@ class PhotoCatalogWindow(QMainWindow):
         detail_layout.addStretch(1)
         detail = QWidget()
         detail.setLayout(detail_layout)
-        detail.setMinimumWidth(360)
+        detail.setMinimumWidth(340)
+        self.detail_scroll = QScrollArea()
+        self.detail_scroll.setWidgetResizable(True)
+        self.detail_scroll.setFrameShape(QScrollArea.NoFrame)
+        self.detail_scroll.setWidget(detail)
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(self.table)
-        splitter.addWidget(detail)
+        splitter.addWidget(self.detail_scroll)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
 
@@ -394,6 +403,7 @@ class PhotoCatalogWindow(QMainWindow):
             self.subtitle.setText("Add an originals folder to create your first shoot catalog.")
             self.preview.clear()
             self.preview.setText("Select a photo to inspect it.")
+            self._preview_pixmap = QPixmap()
             self._set_selection_actions(False)
             self.load_more_button.hide()
             return
@@ -415,7 +425,8 @@ class PhotoCatalogWindow(QMainWindow):
         self.load_more_button.setVisible(len(self._records) == self.PAGE_SIZE)
         if not self._records:
             self.job_status.setText("No photos match this shoot and filter.")
-            self.preview.setPixmap(QPixmap())
+            self._preview_pixmap = QPixmap()
+            self.preview.setPixmap(self._preview_pixmap)
             self.preview.setText("No matching photos.")
             self.photo_title.setText("No photo selected")
             self.photo_metadata.clear()
@@ -494,7 +505,8 @@ class PhotoCatalogWindow(QMainWindow):
         )
         self.keyword_edit.setText(record.keywords)
         if record.missing or not record.path.is_file():
-            self.preview.setPixmap(QPixmap())
+            self._preview_pixmap = QPixmap()
+            self.preview.setPixmap(self._preview_pixmap)
             self.preview.setText("Original file is missing; relink this shoot folder.")
             return
         self._preview_generation += 1
@@ -510,15 +522,28 @@ class PhotoCatalogWindow(QMainWindow):
         if generation != self._preview_generation:
             return
         if image is None:
-            self.preview.setPixmap(QPixmap())
+            self._preview_pixmap = QPixmap()
+            self.preview.setPixmap(self._preview_pixmap)
             self.preview.setText(f"Preview unavailable: {error}")
         else:
             self.preview.setText("")
-            self.preview.setPixmap(
-                QPixmap.fromImage(image).scaled(
-                    self.preview.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
-                )
+            self._preview_pixmap = QPixmap.fromImage(image)
+            self._scale_preview()
+
+    def _scale_preview(self):
+        if self._preview_pixmap.isNull():
+            return
+        self.preview.setPixmap(
+            self._preview_pixmap.scaled(
+                self.preview.contentsRect().size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
             )
+        )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._scale_preview()
 
     def _set_selection_actions(self, enabled):
         records = self._selected_records()

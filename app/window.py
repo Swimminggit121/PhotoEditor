@@ -244,12 +244,19 @@ class MainWindow(QMainWindow):
             return
         if self.catalog_window is None:
             self.catalog_window=PhotoCatalogWindow(self)
-            self.catalog_window.photo_selected.connect(self.open_image_path)
+            self.catalog_window.photo_selected.connect(self._open_catalog_photo)
             self.catalog_window.photo_workspace_requested.connect(self._show_photo_editor)
             self.catalog_window.video_requested.connect(
                 lambda paths:self.create_video_montage(initial_paths=paths)
             )
         self.catalog_window.show();self.catalog_window.raise_();self.catalog_window.activateWindow()
+    def _open_catalog_photo(self,path):
+        if self.open_image_path(path):
+            if self.catalog_window:
+                self.catalog_window.hide()
+            self.show()
+            self.raise_()
+            self.activateWindow()
     def _show_photo_editor(self):
         if self.catalog_window:self.catalog_window.hide()
         self.show();self.raise_();self.activateWindow()

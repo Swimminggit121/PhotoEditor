@@ -4,6 +4,8 @@ import sys
 import tempfile
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
+from types import SimpleNamespace
 
 import numpy as np
 from PIL import Image
@@ -13,7 +15,7 @@ from PIL import ImageCms
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.batch_processor import BatchProcessor
-from core.photo_catalog import PhotoCatalog, analyze_photo_quality, export_metadata
+from core.photo_catalog import PhotoCatalog, _exif_metadata, analyze_photo_quality, export_metadata
 from image.export import EXPORT_RECIPES, export_with_recipe, srgb_profile_bytes
 from image.loader import load_image
 
@@ -30,6 +32,34 @@ def make_gradient():
 def main():
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
+        raw_metadata_path = root / "mock-camera.NEF"
+        raw_exif = Image.Exif()
+        raw_exif[271] = "Example RAW Camera"
+        raw_exif[272] = "Model R"
+        raw_exif[ExifTags.IFD.Exif] = {
+            36867: "2026:01:02 03:04:05",
+            42036: "RAW Prime 35mm",
+        }
+        Image.new("RGB", (80, 40), (45, 90, 135)).save(
+            raw_metadata_path, format="JPEG", exif=raw_exif
+        )
+
+        class RawMetadataStub:
+            sizes = SimpleNamespace(width=4000, height=3000)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+        with patch("rawpy.imread", return_value=RawMetadataStub()):
+            captured, camera, lens, width, height = _exif_metadata(raw_metadata_path)
+        assert captured == "2026-01-02 03:04:05"
+        assert camera == "Example RAW Camera Model R"
+        assert lens == "RAW Prime 35mm"
+        assert (width, height) == (4000, 3000)
+
         originals = root / "Spring Portraits"
         originals.mkdir()
         original = originals / "frame-001.png"
