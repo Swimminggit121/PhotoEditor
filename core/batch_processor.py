@@ -20,10 +20,12 @@ class BatchResult:
     processed: list[Path]
     failed: list[tuple[Path, str]]
     cancelled: bool = False
+    social_exports: list[Path] | None = None
+    slideshow: Path | None = None
 
 
 class BatchProcessor:
-    """Process a folder of photos without changing the source files."""
+    """Process large photo sets without changing the source files."""
 
     def __init__(
         self,
@@ -34,6 +36,9 @@ class BatchProcessor:
         recursive: bool = False,
         preset=None,
         reference=None,
+        social_pack: bool = False,
+        create_slideshow: bool = False,
+        slideshow_seconds: float = 2.0,
     ):
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
@@ -42,6 +47,9 @@ class BatchProcessor:
         self.recursive = recursive
         self.preset = preset
         self.reference = reference
+        self.social_pack = bool(social_pack)
+        self.create_slideshow = bool(create_slideshow)
+        self.slideshow_seconds = max(0.5, float(slideshow_seconds))
         self.cancel_event = Event()
 
     def cancel(self):
@@ -72,30 +80,59 @@ class BatchProcessor:
         source_files = self.files()
         processed: list[Path] = []
         failed: list[tuple[Path, str]] = []
+        social_exports: list[Path] = []
+        slideshow_images = []
 
         for index, source in enumerate(source_files, 1):
             if self.cancel_event.is_set():
-                return BatchResult(processed, failed, True)
+                return BatchResult(processed, failed, True, social_exports, None)
 
             try:
                 document = Document()
                 document.load(source)
                 document.adjustments = self._adjustments_for(document)
+                rendered = document.render()
 
                 relative = source.relative_to(self.input_dir) if self.recursive else Path(source.name)
-                destination = self.output_dir / relative
+                destination = self.output_dir / "Edited" / relative
                 suffix=destination.suffix.lower()
                 if suffix not in EXPORTABLE_EXTENSIONS:
                     destination=destination.with_suffix(".jpg")
                 destination=destination.with_name(destination.stem + "_edited" + destination.suffix)
                 destination.parent.mkdir(parents=True, exist_ok=True)
 
-                export_image(document.render(), destination, self.quality)
+                export_image(rendered, destination, self.quality)
                 processed.append(destination)
+
+                if self.social_pack:
+                    from core.social_export import export_social_pack
+                    social_exports.extend(
+                        export_social_pack(
+                            rendered,
+                            source.stem,
+                            self.output_dir / "Social_Pack",
+                            self.quality,
+                        )
+                    )
+
+                if self.create_slideshow:
+                    slideshow_images.append(rendered.copy())
             except Exception as exc:
                 failed.append((source, str(exc)))
 
             if progress:
                 progress(index, len(source_files), source)
 
-        return BatchResult(processed, failed, False)
+        slideshow = None
+        if self.create_slideshow and slideshow_images and not self.cancel_event.is_set():
+            try:
+                from core.social_export import create_social_slideshow
+                slideshow = create_social_slideshow(
+                    slideshow_images,
+                    self.output_dir / "Social_Video" / "vertical_social_clip.mp4",
+                    seconds_per_photo=self.slideshow_seconds,
+                )
+            except Exception as exc:
+                failed.append((Path("social slideshow"), str(exc)))
+
+        return BatchResult(processed, failed, False, social_exports, slideshow)
