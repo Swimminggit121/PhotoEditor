@@ -79,9 +79,6 @@ def _ken_burns_frame(image: Image.Image, width: int, height: int, progress: floa
 
     max_x = max(0, source.width - crop_w)
     max_y = max(0, source.height - crop_h)
-
-    # Slow zoom plus a gentle diagonal pan keeps still-photo videos alive without
-    # introducing distracting motion.
     zoom = 1.0 + 0.045 * float(progress)
     crop_w = max(2, min(source.width, int(crop_w / zoom)))
     crop_h = max(2, min(source.height, int(crop_h / zoom)))
@@ -107,18 +104,63 @@ def create_social_slideshow(
 ) -> Path:
     if not images:
         raise ValueError("At least one photo is required to create a social clip.")
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    return _write_slideshow(
+        (image.convert("RGB") for image in images),
+        destination,
+        width,
+        height,
+        fps,
+        seconds_per_photo,
+        transition_seconds,
+    )
+
+
+def create_social_slideshow_from_paths(
+    image_paths: list[str | Path],
+    destination: str | Path,
+    width: int = 1080,
+    height: int = 1920,
+    fps: int = 30,
+    seconds_per_photo: float = 2.0,
+    transition_seconds: float = 0.25,
+) -> Path:
+    if not image_paths:
+        raise ValueError("At least one photo is required to create a social clip.")
+
+    def images():
+        for path in image_paths:
+            with Image.open(path) as image:
+                yield image.convert("RGB")
 
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    return _write_slideshow(
+        images(),
+        destination,
+        width,
+        height,
+        fps,
+        seconds_per_photo,
+        transition_seconds,
+    )
 
+
+def _write_slideshow(
+    images,
+    destination: Path,
+    width: int,
+    height: int,
+    fps: int,
+    seconds_per_photo: float,
+    transition_seconds: float,
+) -> Path:
     fps = max(1, int(fps))
     seconds_per_photo = max(0.5, float(seconds_per_photo))
     transition_seconds = max(0.0, min(float(transition_seconds), seconds_per_photo * 0.5))
     frames_per_photo = max(1, int(round(seconds_per_photo * fps)))
-    transition_frames = min(
-        int(round(transition_seconds * fps)),
-        max(0, frames_per_photo // 2),
-    )
+    transition_frames = min(int(round(transition_seconds * fps)), max(0, frames_per_photo // 2))
 
     writer = cv2.VideoWriter(
         str(destination),
@@ -129,29 +171,39 @@ def create_social_slideshow(
     if not writer.isOpened():
         raise RuntimeError("Could not create the MP4 video. Check that OpenCV has an MP4 codec available.")
 
+    previous = None
     try:
-        prepared = [image.convert("RGB") for image in images]
+        for image in images:
+            if previous is None:
+                previous = image
+                continue
 
-        for index, image in enumerate(prepared):
-            for frame_index in range(frames_per_photo):
-                progress = frame_index / max(frames_per_photo - 1, 1)
-                current = _ken_burns_frame(image, width, height, progress)
+            _write_photo(writer, previous, image, width, height, fps, frames_per_photo, transition_frames)
+            previous = image
 
-                if (
-                    transition_frames > 0
-                    and frame_index >= frames_per_photo - transition_frames
-                    and index < len(prepared) - 1
-                ):
-                    next_image = prepared[index + 1]
-                    next_progress = (
-                        frame_index - (frames_per_photo - transition_frames)
-                    ) / max(transition_frames - 1, 1)
-                    following = _ken_burns_frame(next_image, width, height, next_progress)
-                    alpha = float(np.clip(next_progress, 0.0, 1.0))
-                    current = cv2.addWeighted(current, 1.0 - alpha, following, alpha, 0.0)
-
-                writer.write(current)
+        if previous is not None:
+            _write_photo(writer, previous, None, width, height, fps, frames_per_photo, 0)
     finally:
         writer.release()
 
     return destination
+
+
+def _write_photo(writer, image, next_image, width, height, fps, frames_per_photo, transition_frames):
+    for frame_index in range(frames_per_photo):
+        progress = frame_index / max(frames_per_photo - 1, 1)
+        current = _ken_burns_frame(image, width, height, progress)
+
+        if (
+            next_image is not None
+            and transition_frames > 0
+            and frame_index >= frames_per_photo - transition_frames
+        ):
+            next_progress = (
+                frame_index - (frames_per_photo - transition_frames)
+            ) / max(transition_frames - 1, 1)
+            following = _ken_burns_frame(next_image, width, height, next_progress)
+            alpha = float(np.clip(next_progress, 0.0, 1.0))
+            current = cv2.addWeighted(current, 1.0 - alpha, following, alpha, 0.0)
+
+        writer.write(current)
