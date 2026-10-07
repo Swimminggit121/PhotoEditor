@@ -31,6 +31,7 @@ class BatchProcessor:
         self.quality=int(max(1,min(100,quality)));self.recursive=recursive;self.preset=preset;self.reference=reference
         self.social_pack=bool(social_pack);self.create_slideshow=bool(create_slideshow);self.slideshow_seconds=max(0.5,float(slideshow_seconds))
         self.cancel_event=Event()
+        self._consistent_reference = None
 
     def cancel(self): self.cancel_event.set()
 
@@ -41,6 +42,13 @@ class BatchProcessor:
     def _adjustments_for(self,document: Document):
         if self.mode=="auto_edit": return auto_edit(document.original_image,document.adjustments)
         if self.mode=="auto_grade": return auto_colour_grade(document.original_image,document.adjustments)
+        if self.mode=="auto_consistent":
+            from core.style_match import apply_style_profile, build_style_profile
+            if self._consistent_reference is None:
+                first = auto_edit(document.original_image, document.adjustments)
+                self._consistent_reference = build_style_profile(first)
+                return first
+            return apply_style_profile(document.original_image, self._consistent_reference, strength=0.82)
         if self.mode=="preset":
             if self.preset is None: raise ValueError("No preset was selected.")
             return self.preset.copy()
