@@ -1,10 +1,16 @@
 name: PhotoEditor CI
+
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
   smoke-test:
     runs-on: windows-latest
@@ -18,6 +24,7 @@ jobs:
       - run: python tests/smoke_test.py
       - run: python tests/feature_test.py
       - run: python tests/batch_test.py
+      - run: python tests/social_export_test.py
       - run: python tests/video_test.py
       - run: python -m compileall -q app core image masks presets processing tests ui video main.py video_main.py suite_main.py
   windows-build:
@@ -41,16 +48,9 @@ jobs:
             dist/PhotoEditor.exe
             dist/VideoEditor.exe
             dist/PhotoEditorSuite.exe
-
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
-        run: |
-          gh release create "$env:GITHUB_REF_NAME" `
-            "dist/PhotoEditor.exe" `
-            "dist/VideoEditor.exe" `
-            "dist/PhotoEditorSuite.exe" `
-            --title "PhotoEditor Suite $env:GITHUB_REF_NAME" `
-            --generate-notes
+        run: gh release create "$env:GITHUB_REF_NAME" "dist/PhotoEditor.exe" "dist/VideoEditor.exe" "dist/PhotoEditorSuite.exe" --title "PhotoEditor Suite $env:GITHUB_REF_NAME" --generate-notes
