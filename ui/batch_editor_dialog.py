@@ -4,19 +4,9 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QFileDialog,
-    QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QProgressBar,
-    QPushButton,
-    QCheckBox,
-    QVBoxLayout,
+    QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+    QHBoxLayout, QLabel, QLineEdit, QMessageBox, QProgressBar, QPushButton,
+    QCheckBox, QDoubleSpinBox, QVBoxLayout,
 )
 
 from core.batch_processor import BatchProcessor
@@ -36,7 +26,6 @@ class BatchWorker(QObject):
     def run(self):
         def callback(current, total, path):
             self.progress.emit(current, total, path.name)
-
         self.finished.emit(self.processor.run(callback))
 
 
@@ -47,8 +36,8 @@ class BatchEditorDialog(QDialog):
         self.processor = None
         self.thread = None
         self.worker = None
-        self.setWindowTitle("Batch Auto Edit")
-        self.setMinimumWidth(620)
+        self.setWindowTitle("Batch Studio")
+        self.setMinimumWidth(700)
 
         self.input_edit = QLineEdit()
         self.output_edit = QLineEdit()
@@ -62,11 +51,21 @@ class BatchEditorDialog(QDialog):
         self.quality.addItems(["100", "95", "90", "85"])
         self.quality.setCurrentText("95")
         self.recursive = QCheckBox("Include subfolders")
+        self.social_pack = QCheckBox("Create complete social-media image pack")
+        self.social_pack.setChecked(True)
+        self.slideshow = QCheckBox("Create a vertical Instagram / Reels / YouTube Shorts MP4")
+        self.slideshow.setChecked(True)
+        self.seconds = QDoubleSpinBox()
+        self.seconds.setRange(0.5, 10.0)
+        self.seconds.setSingleStep(0.5)
+        self.seconds.setValue(2.0)
+        self.seconds.setSuffix(" seconds/photo")
         self.preset_edit = QLineEdit()
         self.reference_label = QLabel("Uses the currently edited photo as the reference style.")
+
         self.progress = QProgressBar()
         self.status = QLabel("Choose an input and output folder.")
-        self.start_button = QPushButton("Start")
+        self.start_button = QPushButton("Start Batch Studio")
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setEnabled(False)
 
@@ -76,6 +75,9 @@ class BatchEditorDialog(QDialog):
         form.addRow("Editing mode", self.mode)
         form.addRow("JPEG quality", self.quality)
         form.addRow("", self.recursive)
+        form.addRow("", self.social_pack)
+        form.addRow("", self.slideshow)
+        form.addRow("Clip timing", self.seconds)
         form.addRow("Preset JSON", self._preset_row())
         form.addRow("Reference", self.reference_label)
 
@@ -91,6 +93,8 @@ class BatchEditorDialog(QDialog):
         layout.addWidget(buttons)
 
         self.mode.currentIndexChanged.connect(self._update_mode_ui)
+        self.social_pack.toggled.connect(self._update_mode_ui)
+        self.slideshow.toggled.connect(self._update_mode_ui)
         self.start_button.clicked.connect(self.start)
         self._update_mode_ui()
 
@@ -100,10 +104,8 @@ class BatchEditorDialog(QDialog):
         button.clicked.connect(lambda: self._browse_folder(edit, input_folder))
         row.addWidget(edit)
         row.addWidget(button)
-        wrapper = QHBoxLayout()
-        wrapper.addLayout(row)
         container = QLabel()
-        container.setLayout(wrapper)
+        container.setLayout(row)
         return container
 
     def _browse_folder(self, edit, input_folder):
@@ -133,15 +135,16 @@ class BatchEditorDialog(QDialog):
 
     def _update_mode_ui(self):
         self.preset_edit.setEnabled(self.mode.currentData() == "preset")
-
+        self.seconds.setEnabled(self.slideshow.isChecked())
+    
     def start(self):
         input_dir = Path(self.input_edit.text().strip())
         output_dir = Path(self.output_edit.text().strip())
         if not input_dir.is_dir():
-            QMessageBox.warning(self, "Batch Auto Edit", "Choose a valid input folder.")
+            QMessageBox.warning(self, "Batch Studio", "Choose a valid input folder.")
             return
-        if not output_dir:
-            QMessageBox.warning(self, "Batch Auto Edit", "Choose an output folder.")
+        if not str(output_dir):
+            QMessageBox.warning(self, "Batch Studio", "Choose an output folder.")
             return
 
         mode = self.mode.currentData()
@@ -166,10 +169,13 @@ class BatchEditorDialog(QDialog):
                 recursive=self.recursive.isChecked(),
                 preset=preset,
                 reference=reference,
+                social_pack=self.social_pack.isChecked(),
+                create_slideshow=self.slideshow.isChecked(),
+                slideshow_seconds=self.seconds.value(),
             )
             total = len(self.processor.files())
             if total == 0:
-                QMessageBox.information(self, "Batch Auto Edit", "No supported photos were found.")
+                QMessageBox.information(self, "Batch Studio", "No supported photos were found.")
                 return
 
             self.progress.setRange(0, total)
@@ -188,7 +194,7 @@ class BatchEditorDialog(QDialog):
             self.thread.finished.connect(self.thread.deleteLater)
             self.thread.start()
         except Exception as exc:
-            QMessageBox.critical(self, "Batch Auto Edit", str(exc))
+            QMessageBox.critical(self, "Batch Studio", str(exc))
 
     @Slot(int, int, str)
     def update_progress(self, current, total, name):
@@ -201,24 +207,33 @@ class BatchEditorDialog(QDialog):
         self.cancel_button.setEnabled(False)
         if result.cancelled:
             self.status.setText(f"Cancelled after {len(result.processed)} photos.")
-        elif result.failed:
+            return
+
+        if result.failed:
             self.status.setText(
-                f"Finished: {len(result.processed)} exported, {len(result.failed)} failed."
+                f"Finished: {len(result.processed)} edited, {len(result.social_exports or [])} social files, "
+                f"{len(result.failed)} failed."
             )
             details = "\n".join(f"{path.name}: {error}" for path, error in result.failed[:12])
             QMessageBox.warning(
                 self,
                 "Batch completed with errors",
-                f"Exported {len(result.processed)} photos.\n"
-                f"Failed: {len(result.failed)}\n\n{details}",
+                f"Edited: {len(result.processed)}\n"
+                f"Social exports: {len(result.social_exports or [])}\n"
+                f"Failures: {len(result.failed)}\n\n{details}",
             )
-        else:
-            self.status.setText(f"Finished: {len(result.processed)} photos exported.")
-            QMessageBox.information(
-                self,
-                "Batch Auto Edit",
-                f"Successfully exported {len(result.processed)} photos.",
-            )
+            return
+
+        slideshow = f"\nVertical MP4: {result.slideshow.name}" if result.slideshow else ""
+        self.status.setText(
+            f"Finished: {len(result.processed)} edited, {len(result.social_exports or [])} social files."
+        )
+        QMessageBox.information(
+            self,
+            "Batch Studio Complete",
+            f"Edited photos: {len(result.processed)}\n"
+            f"Social image exports: {len(result.social_exports or [])}{slideshow}",
+        )
 
     def cancel(self):
         if self.processor:
