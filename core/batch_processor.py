@@ -11,7 +11,6 @@ from image.export import export_image
 from image.loader import is_supported
 
 EXPORTABLE_EXTENSIONS={".jpg",".jpeg",".png",".tif",".tiff",".webp"}
-
 ProgressCallback = Callable[[int, int, Path], None]
 
 
@@ -81,7 +80,7 @@ class BatchProcessor:
         processed: list[Path] = []
         failed: list[tuple[Path, str]] = []
         social_exports: list[Path] = []
-        slideshow_images = []
+        slideshow_sources: list[Path] = []
 
         for index, source in enumerate(source_files, 1):
             if self.cancel_event.is_set():
@@ -104,19 +103,21 @@ class BatchProcessor:
                 export_image(rendered, destination, self.quality)
                 processed.append(destination)
 
-                if self.social_pack:
+                if self.social_pack or self.create_slideshow:
                     from core.social_export import export_social_pack
-                    social_exports.extend(
-                        export_social_pack(
-                            rendered,
-                            source.stem,
-                            self.output_dir / "Social_Pack",
-                            self.quality,
-                        )
+                    exports = export_social_pack(
+                        rendered,
+                        source.stem,
+                        self.output_dir / "Social_Pack",
+                        self.quality,
                     )
+                    social_exports.extend(exports)
+                    if self.create_slideshow:
+                        vertical = next(
+                            p for p in exports if "_vertical_9x16" in p.name
+                        )
+                        slideshow_sources.append(vertical)
 
-                if self.create_slideshow:
-                    slideshow_images.append(rendered.copy())
             except Exception as exc:
                 failed.append((source, str(exc)))
 
@@ -124,11 +125,11 @@ class BatchProcessor:
                 progress(index, len(source_files), source)
 
         slideshow = None
-        if self.create_slideshow and slideshow_images and not self.cancel_event.is_set():
+        if self.create_slideshow and slideshow_sources and not self.cancel_event.is_set():
             try:
-                from core.social_export import create_social_slideshow
-                slideshow = create_social_slideshow(
-                    slideshow_images,
+                from core.social_export import create_social_slideshow_from_paths
+                slideshow = create_social_slideshow_from_paths(
+                    slideshow_sources,
                     self.output_dir / "Social_Video" / "vertical_social_clip.mp4",
                     seconds_per_photo=self.slideshow_seconds,
                 )
