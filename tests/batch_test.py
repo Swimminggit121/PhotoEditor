@@ -26,6 +26,33 @@ def test_batch_auto_edit(tmp_path):
     assert all(path.exists() for path in result.processed)
 
 
+def test_batch_social_pack(tmp_path):
+    source = tmp_path / "source"
+    output = tmp_path / "output"
+    source.mkdir()
+
+    for index in range(2):
+        image = Image.new("RGB", (96, 64), (80 + index * 25, 110, 150))
+        image.save(source / f"social_{index}.jpg")
+
+    processor = BatchProcessor(
+        source,
+        output,
+        mode="auto_edit",
+        social_pack=True,
+        create_slideshow=True,
+        slideshow_seconds=0.5,
+    )
+    result = processor.run()
+
+    assert not result.cancelled
+    assert not result.failed
+    assert len(result.processed) == 2
+    assert len(result.social_exports) == 8
+    assert result.slideshow is not None
+    assert result.slideshow.exists()
+
+
 def test_batch_cancel(tmp_path):
     source = tmp_path / "source"
     output = tmp_path / "output"
