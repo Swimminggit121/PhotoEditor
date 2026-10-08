@@ -26,23 +26,57 @@ PROFILES = {
 }
 
 
-def _fit(image: Image.Image, width: int, height: int) -> Image.Image:
-    return ImageOps.fit(image.convert("RGB"), (int(width), int(height)), method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+def _fit(image: Image.Image, width: int, height: int, focal_point: tuple[float, float] = (0.5, 0.5)) -> Image.Image:
+    focal_x = max(0.0, min(1.0, float(focal_point[0])))
+    focal_y = max(0.0, min(1.0, float(focal_point[1])))
+    return ImageOps.fit(
+        image.convert("RGB"),
+        (int(width), int(height)),
+        method=Image.Resampling.LANCZOS,
+        centering=(focal_x, focal_y),
+    )
 
 
-def export_social_image(image: Image.Image, destination: str | Path, profile: SocialProfile, quality: int = 95) -> Path:
+def export_social_image(
+    image: Image.Image,
+    destination: str | Path,
+    profile: SocialProfile,
+    quality: int = 95,
+    focal_point: tuple[float, float] = (0.5, 0.5),
+    metadata: bytes | None = None,
+) -> Path:
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    _fit(image, profile.width, profile.height).save(destination, format="JPEG", quality=max(1, min(100, int(quality))), optimize=True, progressive=True)
+    kwargs = dict(format="JPEG", quality=max(1, min(100, int(quality))), optimize=True, progressive=True)
+    if metadata:
+        kwargs["exif"] = metadata
+    _fit(image, profile.width, profile.height, focal_point).save(destination, **kwargs)
     return destination
 
 
-def export_social_pack(image: Image.Image, source_stem: str, output_dir: str | Path, quality: int = 95, profiles: tuple[str, ...] = tuple(PROFILES)) -> list[Path]:
+def export_social_pack(
+    image: Image.Image,
+    source_stem: str,
+    output_dir: str | Path,
+    quality: int = 95,
+    profiles: tuple[str, ...] = tuple(PROFILES),
+    focal_point: tuple[float, float] = (0.5, 0.5),
+    metadata: bytes | None = None,
+) -> list[Path]:
     output_dir = Path(output_dir)
     results = []
     for key in profiles:
         profile = PROFILES[key]
-        results.append(export_social_image(image, output_dir / profile.folder / f"{source_stem}{profile.suffix}", profile, quality))
+        results.append(
+            export_social_image(
+                image,
+                output_dir / profile.folder / f"{source_stem}{profile.suffix}",
+                profile,
+                quality,
+                focal_point,
+                metadata,
+            )
+        )
     return results
 
 
