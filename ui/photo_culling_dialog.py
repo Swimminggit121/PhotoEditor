@@ -6,7 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal, QObject, Slot
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout,
-    QLabel, QListWidget, QListWidgetItem, QMessageBox, QProgressBar, QPushButton,
+    QLabel, QListWidget, QListWidgetItem, QMessageBox, QProgressBar, QPushButton, QLineEdit,
     QVBoxLayout,
 )
 
