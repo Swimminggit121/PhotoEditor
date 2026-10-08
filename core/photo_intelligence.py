@@ -62,12 +62,12 @@ def detect_faces_and_focal(image: Image.Image) -> tuple[int, float, float]:
         return len(faces), float(x / small.width), float(y / small.height)
 
     # Saliency gives a useful subject/focal estimate without requiring an ML model.
-    saliency = cv2.saliency.StaticSaliencySpectralResidual_create()
-    ok, saliency_map = saliency.computeSaliency(np.asarray(small))
-    if ok:
-        _, _, _, max_loc = cv2.minMaxLoc(saliency_map)
-        return 0, float(max_loc[0] / small.width), float(max_loc[1] / small.height)
-
+    if hasattr(cv2, "saliency"):
+        saliency = cv2.saliency.StaticSaliencySpectralResidual_create()
+        ok, saliency_map = saliency.computeSaliency(np.asarray(small))
+        if ok:
+            _, _, _, max_loc = cv2.minMaxLoc(saliency_map)
+            return 0, float(max_loc[0] / small.width), float(max_loc[1] / small.height)
     return 0, 0.5, 0.5
 
 
@@ -127,8 +127,7 @@ def analyse_folder(folder: str | Path, recursive: bool = True) -> list[PhotoAnal
     for path in paths:
         try:
             analysis = analyse_image(path)
-            with Image.open(path) if path.suffix.lower() not in {".cr2", ".cr3", ".nef", ".nrw", ".arw", ".dng", ".raf", ".orf", ".rw2"} else _raw_context(path) as image:
-                hashes.append(_phash(image))
+            hashes.append(_phash(load_image(path)))
             analyses.append(analysis)
         except Exception:
             continue
