@@ -1,61 +1,83 @@
 # PhotoEditor
 
-PhotoEditor is a Windows desktop photo editor built with Python, PySide6, Pillow, NumPy and OpenCV. It is designed around a non-destructive editing workflow with a Lightroom-style development interface.
+PhotoEditor is a Windows-focused, non-destructive photo editor built with Python and PySide6.
 
-## Current features
+## Editing
 
-- JPG, JPEG, PNG, TIFF, WebP, BMP and GIF raster import
-- Optional RAW import through rawpy
 - Exposure, contrast, highlights, shadows, whites and blacks
-- Temperature, tint, saturation and vibrance
-- Texture, clarity and dehaze
-- Sharpening and noise reduction
-- Grain and vignette
-- HSL colour mixer
-- RGB/master curves
-- Shadows, midtones, highlights and global colour grading
-- Colour grading blending and balance
-- Automatic colour correction / Auto Colour Grade
-- Rotate, straighten and flip
-- Crop presets: original, 1:1, 4:3, 16:9 and 3:4
-- Before/after preview
-- Zoom, fit and canvas panning
-- Histogram
-- Undo/redo and reset
-- Non-destructive adjustment state
-- Save and reopen .photoedit projects
-- JPEG, PNG, TIFF and WebP export
-- Export quality control
-- Preset storage API
-- Batch processing API
-- Image metadata reading API
+- Temperature, tint, vibrance and saturation
+- Texture, clarity, dehaze, sharpening and noise reduction
+- Curves and HSL
+- Professional colour grading controls
+- Local brush, linear and radial adjustments
+- Cropping, geometry and export
+- RAW image loading where supported
+- Batch auto-editing
+- Before/after preview and history
 
-## Optional RAW support
+## AI Studio
 
-The main requirements are kept compatible with the project's Python 3.14 environment. To add RAW decoding, install:
+The editor now includes an optional local AI subsystem. The normal editor remains usable without AI packages.
 
-```bash
-pip install -r requirements-raw.txt
+AI features include:
+
+- Object and subject detection
+- Face-aware focal point detection
+- AI subject masks
+- Sky masks
+- Smart aspect-ratio cropping
+- Photo quality analysis
+- Exposure, sharpness, noise and composition scoring
+- AI-assisted auto grading
+- Reference-image matching
+- Duplicate/burst analysis
+- Batch photo ranking and culling
+- Local denoising and upscaling pipeline
+- GPU/CPU runtime detection
+- Model caching under the user's PhotoEditor AI directory
+
+AI models are loaded locally. The application does not require sending photographs to a cloud AI service.
+
+## Optional AI installation
+
+Use Python 3.13 for the most predictable Windows AI environment.
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-ai.txt
 ```
 
-If rawpy is unavailable, normal raster image editing still works.
+The first detector inference can download its model automatically. Model files are kept outside the repository so they are not bundled into Git or every Windows executable.
+
+For NVIDIA systems, the installed PyTorch build should provide CUDA support; PhotoEditor automatically selects CUDA when PyTorch reports a CUDA-capable device and otherwise uses CPU.
 
 ## Run
 
-```bash
+```powershell
 python main.py
 ```
 
-## Project layout
+## Windows build
 
-- `app/` application and main window
-- `core/` document, history, renderer, projects and automatic grading
-- `image/` loading, exporting and metadata
-- `processing/` image-processing algorithms and batch processing
-- `ui/` editor panels and controls
-- `presets/` preset storage
-- `tests/` automated smoke tests
+GitHub Actions builds:
 
-## Development
+- PhotoEditor.exe
+- VideoEditor.exe
+- PhotoEditorSuite.exe
 
-The editor is intentionally split into non-destructive processing stages so new tools can be added without changing the original image. Export always renders the current adjustment state.
+The base Windows executable deliberately does not bundle large optional AI model weights. Install the optional AI environment separately when local AI features are required.
+
+## Project structure
+
+```
+ai/             Local AI runtime, analysis, masks, culling and enhancement
+app/            Application/window lifecycle
+core/           Document, rendering, history and photo intelligence
+image/          Image/RAW loading and export
+masks/          Local adjustment mask engine
+processing/     Image processing algorithms
+ui/             PySide6 interface
+tests/          Smoke and feature tests
+.github/        CI and Windows build automation
+```
