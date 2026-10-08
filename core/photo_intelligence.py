@@ -101,7 +101,14 @@ def analyse_image(path: str | Path) -> PhotoAnalysis:
     sharp_score = min(100.0, 100.0 * (np.log1p(sharpness) / np.log1p(600.0)))
     contrast_score = min(100.0, contrast * 2.2)
     quality = max(0.0, min(100.0, exposure_score * 0.38 + sharp_score * 0.42 + contrast_score * 0.20))
-    faces, focal_x, focal_y = detect_faces_and_focal(small)
+    try:
+        faces, focal_x, focal_y = detect_faces_and_focal(small)
+    except Exception:
+        faces, focal_x, focal_y = 0, 0.5, 0.5
+    try:
+        sky_fraction = estimate_sky_fraction(small)
+    except Exception:
+        sky_fraction = 0.0
     return PhotoAnalysis(
         path=str(path),
         width=image.width,
@@ -114,7 +121,7 @@ def analyse_image(path: str | Path) -> PhotoAnalysis:
         faces=faces,
         focal_x=focal_x,
         focal_y=focal_y,
-        sky_fraction=estimate_sky_fraction(small),
+        sky_fraction=sky_fraction,
     )
 
 
@@ -130,7 +137,21 @@ def analyse_folder(folder: str | Path, recursive: bool = True) -> list[PhotoAnal
             hashes.append(_phash(load_image(path)))
             analyses.append(analysis)
         except Exception:
-            continue
+            try:
+                fallback = load_image(path)
+                analyses.append(PhotoAnalysis(
+                    path=str(path),
+                    width=fallback.width,
+                    height=fallback.height,
+                    brightness=0.0,
+                    contrast=0.0,
+                    sharpness=0.0,
+                    exposure_score=0.0,
+                    quality_score=0.0,
+                ))
+                hashes.append(_phash(fallback))
+            except Exception:
+                continue
 
     group = 0
     assigned: dict[int, int] = {}
