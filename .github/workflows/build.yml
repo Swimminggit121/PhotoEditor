@@ -2,7 +2,7 @@ name: PhotoEditor CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/*"]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -50,8 +50,14 @@ jobs:
             dist/VideoEditor.exe
             dist/PhotoEditorSuite.exe
       - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/release/')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
-        run: gh release create "$env:GITHUB_REF_NAME" "dist/PhotoEditor.exe" "dist/VideoEditor.exe" "dist/PhotoEditorSuite.exe" --title "PhotoEditor Suite $env:GITHUB_REF_NAME" --generate-notes
+        run: |
+          if ($env:GITHUB_REF_NAME -like "release/*") {
+            $tag = "v" + $env:GITHUB_REF_NAME.Substring(8)
+          } else {
+            $tag = $env:GITHUB_REF_NAME
+          }
+          gh release create "$tag" "dist/PhotoEditor.exe" "dist/VideoEditor.exe" "dist/PhotoEditorSuite.exe" --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
