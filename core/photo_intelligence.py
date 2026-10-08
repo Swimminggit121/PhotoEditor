@@ -137,7 +137,21 @@ def analyse_folder(folder: str | Path, recursive: bool = True) -> list[PhotoAnal
             hashes.append(_phash(load_image(path)))
             analyses.append(analysis)
         except Exception:
-            continue
+            try:
+                fallback = load_image(path)
+                analyses.append(PhotoAnalysis(
+                    path=str(path),
+                    width=fallback.width,
+                    height=fallback.height,
+                    brightness=0.0,
+                    contrast=0.0,
+                    sharpness=0.0,
+                    exposure_score=0.0,
+                    quality_score=0.0,
+                ))
+                hashes.append(_phash(fallback))
+            except Exception:
+                continue
 
     group = 0
     assigned: dict[int, int] = {}
