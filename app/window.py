@@ -14,6 +14,7 @@ from ui.geometry_panel import GeometryPanel
 from ui.mask_panel import MaskPanel
 from ui.export_dialog import ExportDialog
 from ui.batch_editor_dialog import BatchEditorDialog
+from ui.photo_culling_dialog import PhotoCullingDialog
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -119,6 +120,10 @@ class MainWindow(QMainWindow):
         dlg=BatchEditorDialog(self)
         dlg.exec()
 
+    def photo_intelligence(self):
+        dlg=PhotoCullingDialog(self)
+        dlg.exec()
+
     def export_image(self):
         if not self.document.has_image():QMessageBox.information(self,"Export","Open an image first.");return
         dlg=ExportDialog(self)
@@ -127,7 +132,7 @@ class MainWindow(QMainWindow):
         path,_=QFileDialog.getSaveFileName(self,"Export Image",default,f"{dlg.format.currentText()} (*{ext})")
         if not path:return
         if Path(path).suffix.lower()!=ext:path+=ext
-        try:export_image(self.document.render(),path,dlg.quality_value());self.status_label.setText(f"Exported: {Path(path).name}")
+        try:export_image(self.document.render(),path,dlg.quality_value(),self.document.metadata);self.status_label.setText(f"Exported: {Path(path).name}")
         except Exception as exc:QMessageBox.critical(self,"Export failed",str(exc))
     def save_project(self):
         if not self.document.has_image():QMessageBox.information(self,"Save Project","Open an image first.");return
