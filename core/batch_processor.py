@@ -9,6 +9,7 @@ from core.auto_grade import auto_colour_grade, auto_edit
 from core.document import Document
 from image.export import export_image
 from image.loader import is_supported
+from core.photo_intelligence import detect_faces_and_focal
 
 EXPORTABLE_EXTENSIONS={".jpg",".jpeg",".png",".tif",".tiff",".webp"}
 ProgressCallback = Callable[[int, int, Path], None]
@@ -66,15 +67,17 @@ class BatchProcessor:
             if self.cancel_event.is_set(): return BatchResult(processed,failed,True,social_exports,None)
             try:
                 document=Document();document.load(source);document.adjustments=self._adjustments_for(document);rendered=document.render()
+                _, focal_x, focal_y = detect_faces_and_focal(rendered)
+                metadata = document.metadata
                 relative=source.relative_to(self.input_dir) if self.recursive else Path(source.name)
                 destination=self.output_dir/"Edited"/relative
                 if destination.suffix.lower() not in EXPORTABLE_EXTENSIONS: destination=destination.with_suffix(".jpg")
                 destination=destination.with_name(destination.stem+"_edited"+destination.suffix);destination.parent.mkdir(parents=True,exist_ok=True)
-                export_image(rendered,destination,self.quality);processed.append(destination)
+                export_image(rendered,destination,self.quality,metadata);processed.append(destination)
 
                 if self.social_pack or self.create_slideshow:
                     from core.social_export import export_social_pack
-                    exports=export_social_pack(rendered,source.stem,self.output_dir/"Social_Pack",self.quality)
+                    exports=export_social_pack(rendered,source.stem,self.output_dir/"Social_Pack",self.quality,focal_point=(focal_x,focal_y),metadata=metadata)
                     social_exports.extend(exports)
                     if self.create_slideshow:
                         slideshow_sources.append(next(p for p in exports if "_vertical_9x16" in p.name))
