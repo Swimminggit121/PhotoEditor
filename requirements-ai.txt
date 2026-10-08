@@ -1,0 +1,8 @@
+# Optional local AI acceleration. The base editor does not require these packages.
+# PyTorch wheels include the appropriate CUDA runtime for supported NVIDIA builds.
+torch
+torchvision
+ultralytics
+transformers
+sentence-transformers
+huggingface-hub
