@@ -27,7 +27,8 @@ jobs:
       - run: python tests/social_export_test.py
       - run: python tests/photo_intelligence_test.py
       - run: python tests/video_test.py
-      - run: python -m compileall -q app core image masks presets processing tests ui video main.py video_main.py suite_main.py
+      - run: python -m compileall -q ai app core image masks presets processing tests ui video main.py video_main.py suite_main.py
+      - run: python tests/ai_test.py
   windows-build:
     runs-on: windows-latest
     needs: smoke-test
