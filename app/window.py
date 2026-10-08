@@ -15,12 +15,14 @@ from ui.mask_panel import MaskPanel
 from ui.export_dialog import ExportDialog
 from ui.batch_editor_dialog import BatchEditorDialog
 from ui.photo_culling_dialog import PhotoCullingDialog
+from ui.ai_panel import AIPanel
+from ai.enhance import enhance
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__();self.document=Document();self.setWindowTitle("PhotoEditor");self.resize(1600,950);self.setMinimumSize(1150,700)
         self.canvas=ImageCanvas();self.setCentralWidget(self.canvas);self._render_timer=QTimer(self);self._render_timer.setSingleShot(True);self._render_timer.timeout.connect(self._perform_preview_render)
-        self.create_menu();self.create_toolbar();self.create_adjustment_panel();self.create_geometry_panel();self.create_mask_panel();self.create_histogram();self.create_status_bar();self.update_title()
+        self.create_menu();self.create_toolbar();self.create_adjustment_panel();self.create_geometry_panel();self.create_mask_panel();self.create_ai_panel();self.create_histogram();self.create_status_bar();self.update_title()
         self.canvas.crop_committed.connect(self.apply_interactive_crop)
         self.mask_panel.paint_requested.connect(self.canvas.start_brush)
         self.canvas.brush_stroke_committed.connect(self.mask_panel.add_stroke)
@@ -37,6 +39,41 @@ class MainWindow(QMainWindow):
     def create_mask_panel(self):
         self.mask_panel=MaskPanel(self.document,self.mask_changed)
         dock=QDockWidget("Masks",self);dock.setWidget(self.mask_panel);dock.setAllowedAreas(Qt.LeftDockWidgetArea);dock.setMinimumWidth(270);self.addDockWidget(Qt.LeftDockWidgetArea,dock)
+    def create_ai_panel(self):
+        self.ai_panel=AIPanel(self)
+        self.ai_panel.analysis_ready.connect(self.ai_analysis_ready)
+        self.ai_panel.grade_ready.connect(self.ai_grade_ready)
+        self.ai_panel.mask_ready.connect(self.ai_mask_ready)
+        self.ai_panel.crop_ready.connect(self.ai_crop_ready)
+        self.ai_panel.enhance_requested.connect(self.ai_enhance)
+        dock=QDockWidget("AI Studio",self);dock.setWidget(self.ai_panel);dock.setAllowedAreas(Qt.RightDockWidgetArea);dock.setMinimumWidth(330);self.addDockWidget(Qt.RightDockWidgetArea,dock)
+
+    def ai_analysis_ready(self,result):
+        self.status_label.setText(f"AI: {result.scene} | Quality {result.quality_score:.0f}/100 | {result.backend}")
+
+    def ai_grade_ready(self,adjustments):
+        if not self.document.has_image(): return
+        self.document.adjustments=adjustments;self.document.push_history();self.refresh_view()
+        self.status_label.setText("AI grade applied — all values remain editable")
+
+    def ai_mask_ready(self,mask):
+        if not self.document.has_image(): return
+        self.document.adjustments.local_adjustments.append(mask);self.document.push_history();self.refresh_view()
+        self.status_label.setText(f"AI mask created: {mask.get('name','AI Mask')}")
+
+    def ai_crop_ready(self,crop):
+        if not self.document.has_image(): return
+        a=self.document.adjustments;a.crop_left=crop.left;a.crop_top=crop.top;a.crop_right=crop.right;a.crop_bottom=crop.bottom
+        self.document.push_history();self.refresh_view();self.status_label.setText(f"Smart crop applied ({crop.score:.0f}/100)")
+
+    def ai_enhance(self,denoise_strength,scale):
+        if not self.document.has_image(): return
+        try:
+            enhanced=enhance(self.document.original_image,denoise_strength,scale)
+            self.document.original_image=enhanced;self.document.image=enhanced.copy()
+            self.document.preview_cache.clear();self.document.render_cache.clear();self.document.push_history();self.refresh_view()
+            self.status_label.setText("AI enhancement applied to working source")
+        except Exception as exc: QMessageBox.critical(self,"AI enhancement failed",str(exc))
     def create_histogram(self):
         self.histogram=HistogramWidget();dock=QDockWidget("Histogram",self);dock.setWidget(self.histogram);dock.setAllowedAreas(Qt.RightDockWidgetArea);dock.setMinimumHeight(190);self.addDockWidget(Qt.RightDockWidgetArea,dock)
     def create_status_bar(self):
