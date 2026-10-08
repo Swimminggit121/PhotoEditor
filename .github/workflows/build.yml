@@ -29,6 +29,7 @@ jobs:
       - run: python tests/video_test.py
       - run: python -m compileall -q ai app core image masks presets processing tests ui video main.py video_main.py suite_main.py
       - run: python tests/ai_test.py
+
   windows-build:
     runs-on: windows-latest
     needs: smoke-test
@@ -50,8 +51,61 @@ jobs:
             dist/PhotoEditor.exe
             dist/VideoEditor.exe
             dist/PhotoEditorSuite.exe
-      - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/release/')
+
+  windows-ai-build:
+    runs-on: windows-latest
+    needs: smoke-test
+    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install base dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Install CUDA-enabled PyTorch AI runtime
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+          pip install ultralytics transformers sentence-transformers huggingface-hub
+      - name: Install packager
+        run: pip install pyinstaller
+      - name: Download the built-in vision model
+        shell: pwsh
+        run: |
+          python -c "from ultralytics import YOLO; YOLO('yolo11n-seg.pt')"
+          if (!(Test-Path "yolo11n-seg.pt")) { throw "YOLO11 segmentation model was not downloaded" }
+      - name: Build consumer AI executable
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name PhotoEditor-AI --add-data "yolo11n-seg.pt;ai_bundle" --collect-all torch --collect-all torchvision --collect-all ultralytics --collect-all transformers --collect-all sentence_transformers --collect-data cv2 main.py
+      - name: Verify AI executable exists
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
+          $size = (Get-Item "dist/PhotoEditor-AI.exe").Length / 1MB
+          Write-Host ("PhotoEditor-AI.exe size: {0:N1} MB" -f $size)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhotoEditor-AI-Windows
+          path: dist/PhotoEditor-AI.exe
+
+  create-release:
+    runs-on: windows-latest
+    needs: [windows-build, windows-ai-build]
+    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: PhotoEditor-Windows
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: PhotoEditor-AI-Windows
+          path: release-assets
+      - name: Publish Windows release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
@@ -61,4 +115,9 @@ jobs:
           } else {
             $tag = $env:GITHUB_REF_NAME
           }
-          gh release create "$tag" "dist/PhotoEditor.exe" "dist/VideoEditor.exe" "dist/PhotoEditorSuite.exe" --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
+          gh release view "$tag" *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI.exe --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
+          } else {
+            gh release upload "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI.exe --clobber
+          }
