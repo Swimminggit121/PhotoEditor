@@ -25,6 +25,7 @@ jobs:
       - run: python tests/feature_test.py
       - run: python tests/batch_test.py
       - run: python tests/social_export_test.py
+      - run: python tests/photo_intelligence_test.py
       - run: python tests/video_test.py
       - run: python -m compileall -q app core image masks presets processing tests ui video main.py video_main.py suite_main.py
   windows-build:
