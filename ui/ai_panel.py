@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Signal, QObject, Slot
 from PySide6.QtWidgets import QGroupBox,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QProgressBar,QFileDialog,QComboBox,QMessageBox
 from ai.analysis import analyze_image
+from core.auto_grade import auto_edit
 from ai.masks import sky_mask, subject_mask, mask_to_local_adjustment
 from ai.model_manager import ModelManager
 from ai.runtime import runtime_info
@@ -74,7 +75,7 @@ class AIPanel(QGroupBox):
     def auto_grade(self):
         image=self.image()
         if image is None:return
-        try:self.grade_ready.emit(analyze_image(image,True))
+        try:self.grade_ready.emit(auto_edit(image))
         except Exception as e:QMessageBox.warning(self,"AI Grade",str(e))
     def reference(self):
         image=self.image()
