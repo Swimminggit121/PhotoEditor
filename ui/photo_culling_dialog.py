@@ -87,6 +87,7 @@ class PhotoCullingDialog(QDialog):
         self.analyse_button.clicked.connect(self.analyse)
         self.contact_button.clicked.connect(self.contact_sheet)
         self.report_button.clicked.connect(self.report)
+        self.sort_mode.currentIndexChanged.connect(self.refresh_list)
 
     def browse(self):
         path = QFileDialog.getExistingDirectory(self, "Choose Photo Folder")
