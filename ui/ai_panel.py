@@ -91,9 +91,12 @@ class AIPanel(QGroupBox):
         detector_status = "weights cached" if detector_cached else (
             "available on first use" if info.ultralytics else "optional package not installed"
         )
+        runtime_status = (
+            "GPU checked on first AI run" if info.torch
+            else "CPU fallback (PyTorch not installed)"
+        )
         self.backend.setText(
-            f"Runtime: {'CUDA / ' + info.gpu_name if info.cuda else 'CPU'} | "
-            f"YOLO segmentation: {detector_status}"
+            f"Runtime: {runtime_status} | YOLO segmentation: {detector_status}"
         )
 
     def _add_button(self, parent_layout, label, callback):
