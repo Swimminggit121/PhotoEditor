@@ -24,10 +24,12 @@ class Document:
         self.render_cache = RenderCache(2)
         self.preview_cache = RenderCache(3)
         self._preview_source = None
+        self._original_preview_source = None
         self._working_history = {}
 
     def _clear_caches(self):
         self._preview_source = None
+        self._original_preview_source = None
         self.render_cache.clear()
         self.preview_cache.clear()
 
@@ -70,6 +72,24 @@ class Document:
                 Image.Resampling.BILINEAR,
             )
         return self._preview_source
+
+    def original_preview_source(self):
+        """Return a downscaled immutable source for the before/after comparison."""
+        source = self.original_image
+        if source is None:
+            return None
+        if self._original_preview_source is not None:
+            return self._original_preview_source
+        longest = max(source.size)
+        if longest <= 1400:
+            self._original_preview_source = source
+        else:
+            scale = 1400 / longest
+            self._original_preview_source = source.resize(
+                (max(1, int(source.width * scale)), max(1, int(source.height * scale))),
+                Image.Resampling.BILINEAR,
+            )
+        return self._original_preview_source
 
     def render(self, preview=False):
         source_image = self.working_image if self.working_image is not None else self.original_image
