@@ -28,11 +28,11 @@ AI features include:
 - Smart aspect-ratio cropping
 - Photo quality analysis
 - Exposure, sharpness, noise and composition scoring
-- AI-assisted auto grading
-- Reference-image matching
+- Statistics-based automatic colour grading
+- Reference-image matching using colour-distribution statistics
 - Duplicate/burst analysis
 - Batch photo ranking and culling
-- Local denoising and upscaling pipeline
+- Classical local denoising and Lanczos resizing fallbacks (not neural restoration)
 - GPU/CPU runtime detection
 - Model caching under the user's PhotoEditor AI directory
 
@@ -49,6 +49,8 @@ python -m pip install -r requirements-ai.txt
 ```
 
 The first detector inference can download its model automatically. Model files are kept outside the repository so they are not bundled into Git or every Windows executable.
+
+The YOLO segmentation model provides neural object/subject detection and segmentation. If its optional package or weights are unavailable, PhotoEditor falls back to local OpenCV methods. Photo quality scoring, sky estimation, reference-style matching, denoising and Lanczos resizing currently use conventional image-processing methods rather than dedicated neural models; the UI labels the classical enhancement tools accordingly.
 
 For NVIDIA systems, the installed PyTorch build should provide CUDA support; PhotoEditor automatically selects CUDA when PyTorch reports a CUDA-capable device and otherwise uses CPU.
 
