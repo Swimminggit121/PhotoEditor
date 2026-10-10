@@ -39,7 +39,7 @@ def save_project(document, path):
         # Keep image_png for compatibility with older project readers.
         "image_png": _image_bytes(document.original_image),
         "working_image_png": _image_bytes(working),
-        "metadata_exif": base64.b64encode(document.metadata).decode("ascii") if document.metadata else None,
+        "metadata_exif": base64.b64encode(getattr(document, "metadata", None)).decode("ascii") if getattr(document, "metadata", None) else None,
         "adjustments": document.adjustments.to_dict(),
     }
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
