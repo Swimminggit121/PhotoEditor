@@ -37,7 +37,7 @@ class Document:
         path = Path(path)
         image = load_image(path)
         self.original_image = image.copy()
-        self.working_image = image.copy()
+        self.working_image = self.original_image
         self.image = self.working_image
         self.path = path
         self.metadata = None
