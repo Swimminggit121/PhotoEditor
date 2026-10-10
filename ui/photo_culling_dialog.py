@@ -107,9 +107,25 @@ class PhotoCullingDialog(QDialog):
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.finished)
-        self.worker.error.connect(lambda message: QMessageBox.critical(self, "Analysis failed", message))
+        self.worker.error.connect(self.failed)
         self.worker.finished.connect(self.thread.quit)
+        self.worker.error.connect(self.thread.quit)
+        self.thread.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self._thread_finished)
         self.thread.start()
+
+    @Slot(str)
+    def failed(self, message):
+        self.analyse_button.setEnabled(True)
+        self.status.setText("Analysis failed. Check the folder and try again.")
+        QMessageBox.critical(self, "Analysis failed", message)
+
+    def _thread_finished(self):
+        thread = self.thread
+        self.thread = None
+        self.worker = None
+        if thread is not None:
+            thread.deleteLater()
 
     @Slot(object)
     def finished(self, analyses):
