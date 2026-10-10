@@ -41,7 +41,9 @@ def test_enhancement_preserves_source_and_supports_undo_redo():
 
     document.set_working_image(enhanced)
     assert document.original_image.size == (20, 16)
+    assert document.original_preview_source().size == (20, 16)
     assert document.working_image.size == (40, 32)
+    assert document.original_preview_source().getpixel((0, 0)) == (10, 20, 30)
     assert document.undo()
     assert document.working_image.size == (20, 16)
     assert document.redo()
