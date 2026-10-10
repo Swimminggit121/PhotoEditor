@@ -106,7 +106,7 @@ class PhotoCullingDialog(QDialog):
         self.worker = CullingWorker(folder, self.recursive.isChecked())
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.finished)
+        self.worker.finished.connect(self.analysis_finished)
         self.worker.error.connect(self.failed)
         self.worker.finished.connect(self.thread.quit)
         self.worker.error.connect(self.thread.quit)
@@ -128,7 +128,7 @@ class PhotoCullingDialog(QDialog):
             thread.deleteLater()
 
     @Slot(object)
-    def finished(self, analyses):
+    def analysis_finished(self, analyses):
         self.analyses = analyses
         self.analyse_button.setEnabled(True)
         self._load_library()
