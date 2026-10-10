@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 from ai.analysis import analyze_image
 from ai.enhance import enhance
 from ai.masks import mask_to_local_adjustment, sky_mask, subject_mask
+from ai.model_manager import ModelManager
 from ai.runtime import runtime_info
 from ai.smart_crop import smart_crop
 from ai.style import reference_grade, reference_similarity
@@ -78,14 +79,21 @@ class AIPanel(QGroupBox):
         self._add_button(layout, "Auto AI Grade", self.auto_grade)
         self._add_button(layout, "Match Reference...", self.reference)
         row3 = QHBoxLayout()
-        self._add_button(row3, "Denoise", lambda: self.enhance(0.35, 1))
-        self._add_button(row3, "2× Upscale", lambda: self.enhance(0, 2))
+        self._add_button(row3, "Denoise (Classical)", lambda: self.enhance(0.35, 1))
+        self._add_button(row3, "2× Resize (Lanczos)", lambda: self.enhance(0, 2))
         layout.addLayout(row3)
 
         info = runtime_info()
+        try:
+            detector_cached = ModelManager().status().get("detector", False)
+        except Exception:
+            detector_cached = False
+        detector_status = "weights cached" if detector_cached else (
+            "available on first use" if info.ultralytics else "optional package not installed"
+        )
         self.backend.setText(
             f"Runtime: {'CUDA / ' + info.gpu_name if info.cuda else 'CPU'} | "
-            f"Detector: {'installed' if info.ultralytics else 'optional'}"
+            f"YOLO segmentation: {detector_status}"
         )
 
     def _add_button(self, parent_layout, label, callback):
