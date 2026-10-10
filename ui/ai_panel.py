@@ -76,7 +76,7 @@ class AIPanel(QGroupBox):
         self._add_button(row2, "Crop", self.crop)
         layout.addLayout(row2)
 
-        self._add_button(layout, "Auto AI Grade", self.auto_grade)
+        self._add_button(layout, "Auto Grade (Statistics)", self.auto_grade)
         self._add_button(layout, "Match Reference...", self.reference)
         row3 = QHBoxLayout()
         self._add_button(row3, "Denoise (Classical)", lambda: self.enhance(0.35, 1))
@@ -160,7 +160,7 @@ class AIPanel(QGroupBox):
                 self.grade_ready.emit(adjustments)
             else:
                 self.grade_ready.emit(result)
-                self.status.setText("AI-assisted grade applied; values remain editable.")
+                self.status.setText("Automatic statistical grade applied; values remain editable.")
         elif key == "enhance":
             self.enhancement_ready.emit(result)
             self.status.setText("Enhancement completed; original photo is preserved.")
