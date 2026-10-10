@@ -1,26 +1,80 @@
 from __future__ import annotations
-import base64, io, json
+
+import base64
+import io
+import json
 from pathlib import Path
+
 from PIL import Image
 from core.adjustment_stack import Adjustments
 
-PROJECT_VERSION=2
+PROJECT_VERSION = 3
 
-def save_project(document,path):
-    path=Path(path)
-    if not path.suffix:path=path.with_suffix(".photoedit")
-    if document.original_image is None:raise ValueError("No image is open.")
-    buf=io.BytesIO(); document.original_image.save(buf,"PNG")
-    data={"version":PROJECT_VERSION,"source_path":str(document.path) if document.path else None,"image_png":base64.b64encode(buf.getvalue()).decode("ascii"),"adjustments":document.adjustments.to_dict()}
-    path.write_text(json.dumps(data,indent=2),encoding="utf-8")
-    document.dirty=False
+
+def _image_bytes(image):
+    if image is None:
+        return None
+    buffer = io.BytesIO()
+    image.convert("RGB").save(buffer, "PNG", optimize=True)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def _decode_image(encoded):
+    if not encoded:
+        return None
+    with Image.open(io.BytesIO(base64.b64decode(encoded))) as image:
+        return image.convert("RGB").copy()
+
+
+def save_project(document, path):
+    path = Path(path)
+    if not path.suffix:
+        path = path.with_suffix(".photoedit")
+    if document.original_image is None:
+        raise ValueError("No image is open.")
+    working = document.working_image if getattr(document, "working_image", None) is not None else document.original_image
+    data = {
+        "version": PROJECT_VERSION,
+        "source_path": str(document.path) if document.path else None,
+        # Keep image_png for compatibility with older project readers.
+        "image_png": _image_bytes(document.original_image),
+        "working_image_png": _image_bytes(working),
+        "metadata_exif": base64.b64encode(document.metadata).decode("ascii") if document.metadata else None,
+        "adjustments": document.adjustments.to_dict(),
+    }
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    document.dirty = False
     return path
 
-def load_project(document,path):
-    data=json.loads(Path(path).read_text(encoding="utf-8"))
-    if data.get("version") not in (1,PROJECT_VERSION):raise ValueError("Unsupported .photoedit project version.")
-    image=Image.open(io.BytesIO(base64.b64decode(data["image_png"]))).convert("RGB")
-    document.original_image=image.copy(); document.image=image.copy(); document.path=Path(path)
-    document.adjustments=Adjustments.from_dict(data.get("adjustments",{}))
-    document.history.clear(); document.history.push(document.adjustments); document.dirty=False
+
+def load_project(document, path):
+    path = Path(path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("version") not in (1, 2, PROJECT_VERSION):
+        raise ValueError("Unsupported .photoedit project version.")
+
+    source = _decode_image(data.get("image_png"))
+    if source is None:
+        raise ValueError("The project does not contain a readable source image.")
+    working = _decode_image(data.get("working_image_png")) or source.copy()
+
+    document.original_image = source
+    document.working_image = working
+    document.image = working
+    document.path = path
+    encoded_metadata = data.get("metadata_exif")
+    try:
+        document.metadata = base64.b64decode(encoded_metadata, validate=True) if encoded_metadata else None
+    except Exception:
+        document.metadata = None
+
+    document.adjustments = Adjustments.from_dict(data.get("adjustments", {}))
+    document.history.clear()
+    document._working_history.clear()
+    document.history.push(document.adjustments)
+    document._working_history[document.history._index] = document.working_image
+    document._preview_source = None
+    document.render_cache.clear()
+    document.preview_cache.clear()
+    document.dirty = False
     return document
