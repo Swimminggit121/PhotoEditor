@@ -132,14 +132,14 @@ class MainWindow(QMainWindow):
         self.document.dirty=True;self.mask_panel.load_selected();self._render_timer.start(45)
     def _perform_preview_render(self):
         if not self.document.has_image():return
-        rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.preview_source());self.histogram.set_image(rendered);self.update_title()
+        rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.original_preview_source());self.histogram.set_image(rendered);self.update_title()
 
     def refresh_render(self):
         self._render_timer.stop()
         self._perform_preview_render()
     def refresh_view(self):
         if not self.document.has_image():return
-        self._render_timer.stop();rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.preview_source());self.histogram.set_image(rendered);self.adjustment_panel.refresh();self.geometry_panel.refresh();self.update_title()
+        self._render_timer.stop();rendered=self.document.render(preview=True);self.canvas.set_image(rendered,self.document.original_preview_source());self.histogram.set_image(rendered);self.adjustment_panel.refresh();self.geometry_panel.refresh();self.update_title()
         self.mask_panel.list.clear()
         for m in self.document.adjustments.local_adjustments:self.mask_panel.list.addItem(m.get("name","Mask"))
         if self.document.adjustments.local_adjustments:self.mask_panel.list.setCurrentRow(0)
