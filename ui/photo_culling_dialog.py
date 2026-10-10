@@ -89,6 +89,20 @@ class PhotoCullingDialog(QDialog):
         self.report_button.clicked.connect(self.report)
         self.sort_mode.currentIndexChanged.connect(self.refresh_list)
 
+    def closeEvent(self, event):
+        thread = self.thread
+        if thread is not None and thread.isRunning():
+            thread.quit()
+            if not thread.wait(5000):
+                QMessageBox.information(
+                    self,
+                    "Analysis still running",
+                    "Photo analysis is still running. Please wait for it to finish before closing this window.",
+                )
+                event.ignore()
+                return
+        event.accept()
+
     def browse(self):
         path = QFileDialog.getExistingDirectory(self, "Choose Photo Folder")
         if path:
