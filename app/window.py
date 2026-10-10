@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
         self.ai_panel.grade_ready.connect(self.ai_grade_ready)
         self.ai_panel.mask_ready.connect(self.ai_mask_ready)
         self.ai_panel.crop_ready.connect(self.ai_crop_ready)
-        self.ai_panel.enhance_requested.connect(self.ai_enhance)
+        self.ai_panel.enhancement_ready.connect(self.ai_enhancement_ready)
         dock=QDockWidget("AI Studio",self);dock.setWidget(self.ai_panel);dock.setAllowedAreas(Qt.RightDockWidgetArea);dock.setMinimumWidth(330);self.addDockWidget(Qt.RightDockWidgetArea,dock)
 
     def ai_analysis_ready(self,result):
@@ -66,14 +66,14 @@ class MainWindow(QMainWindow):
         a=self.document.adjustments;a.crop_left=crop.left;a.crop_top=crop.top;a.crop_right=crop.right;a.crop_bottom=crop.bottom
         self.document.push_history();self.refresh_view();self.status_label.setText(f"Smart crop applied ({crop.score:.0f}/100)")
 
-    def ai_enhance(self,denoise_strength,scale):
+    def ai_enhancement_ready(self, enhanced):
         if not self.document.has_image(): return
         try:
-            enhanced=enhance(self.document.original_image,denoise_strength,scale)
-            self.document.original_image=enhanced;self.document.image=enhanced.copy()
-            self.document.preview_cache.clear();self.document.render_cache.clear();self.document.push_history();self.refresh_view()
-            self.status_label.setText("AI enhancement applied to working source")
-        except Exception as exc: QMessageBox.critical(self,"AI enhancement failed",str(exc))
+            self.document.set_working_image(enhanced)
+            self.refresh_view()
+            self.status_label.setText("Enhancement applied — original source preserved; use Undo to revert")
+        except Exception as exc:
+            QMessageBox.critical(self, "AI enhancement failed", str(exc))
     def create_histogram(self):
         self.histogram=HistogramWidget();dock=QDockWidget("Histogram",self);dock.setWidget(self.histogram);dock.setAllowedAreas(Qt.RightDockWidgetArea);dock.setMinimumHeight(190);self.addDockWidget(Qt.RightDockWidgetArea,dock)
     def create_status_bar(self):
@@ -94,7 +94,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self,"Auto Edit","Open an image first.")
             return
         try:
-            self.document.adjustments=auto_edit(self.document.original_image,self.document.adjustments)
+            self.document.adjustments=auto_edit(self.document.working_image or self.document.original_image,self.document.adjustments)
             self.document.push_history()
             self.refresh_view()
             self.status_label.setText("Auto Edit applied — full colour grade ready to refine")
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
 
     def auto_grade(self):
         if not self.document.has_image():QMessageBox.information(self,"Auto Colour Grade","Open an image first.");return
-        try:self.document.adjustments=auto_colour_grade(self.document.original_image,self.document.adjustments);self.document.push_history();self.refresh_view();self.status_label.setText("Auto Colour Grade applied")
+        try:self.document.adjustments=auto_colour_grade(self.document.working_image or self.document.original_image,self.document.adjustments);self.document.push_history();self.refresh_view();self.status_label.setText("Auto Colour Grade applied")
         except Exception as exc:QMessageBox.critical(self,"Auto Colour Grade failed",str(exc))
     def change_adjustment(self,*args):
         if not args:return
