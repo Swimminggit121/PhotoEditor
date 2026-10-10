@@ -86,9 +86,20 @@ class Document:
         return result
 
     def push_history(self):
+        # History drops its oldest state when full; keep image snapshots aligned to it.
+        states = self.history._states
+        dropping_oldest = (
+            self.history._index == len(states) - 1
+            and len(states) >= self.history.maximum
+        )
         self.history.push(self.adjustments)
+        if dropping_oldest:
+            self._working_history = {
+                index - 1: image
+                for index, image in self._working_history.items()
+                if index > 0
+            }
         self._working_history[self.history._index] = self.working_image
-        # Bound references to the active undo history; old images can be large.
         valid = set(range(max(0, self.history._index - self.history.maximum + 1), self.history._index + 1))
         self._working_history = {i: image for i, image in self._working_history.items() if i in valid}
         self.render_cache.clear()
