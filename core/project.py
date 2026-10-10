@@ -38,7 +38,7 @@ def save_project(document, path):
         "source_path": str(document.path) if document.path else None,
         # Keep image_png for compatibility with older project readers.
         "image_png": _image_bytes(document.original_image),
-        "working_image_png": _image_bytes(working),
+        "working_image_png": _image_bytes(working) if working is not document.original_image else None,
         "metadata_exif": base64.b64encode(getattr(document, "metadata", None)).decode("ascii") if getattr(document, "metadata", None) else None,
         "adjustments": document.adjustments.to_dict(),
     }
@@ -58,7 +58,7 @@ def load_project(document, path):
         raise ValueError("The project does not contain a readable source image.")
     working = _decode_image(data.get("working_image_png"))
     if working is None:
-        working = source.copy()
+        working = source
 
     document.original_image = source
     document.working_image = working
