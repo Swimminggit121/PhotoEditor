@@ -80,6 +80,8 @@ def load_project(document, path):
     document._working_history[document.history._index] = document.working_image
     if hasattr(document, "_preview_source"):
         document._preview_source = None
+    if hasattr(document, "_original_preview_source"):
+        document._original_preview_source = None
     for cache_name in ("render_cache", "preview_cache"):
         cache = getattr(document, cache_name, None)
         if cache is not None:
