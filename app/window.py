@@ -181,8 +181,24 @@ class MainWindow(QMainWindow):
         except Exception as exc:QMessageBox.critical(self,"Save failed",str(exc))
     def update_title(self):
         marker=" *" if self.document.dirty else "";self.setWindowTitle(f"PhotoEditor — {self.document.path.name}{marker}" if self.document.path else "PhotoEditor")
-    def closeEvent(self,event):
+    def closeEvent(self, event):
         if self.document.dirty:
-            result=QMessageBox.question(self,"Unsaved Changes","You have unsaved changes. Are you sure you want to exit?",QMessageBox.Yes|QMessageBox.No)
-            if result!=QMessageBox.Yes:event.ignore();return
+            result = QMessageBox.question(
+                self, "Unsaved Changes",
+                "You have unsaved changes. Are you sure you want to exit?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if result != QMessageBox.Yes:
+                event.ignore()
+                return
+        thread = getattr(self.ai_panel, "thread", None)
+        if thread is not None and thread.isRunning():
+            thread.quit()
+            if not thread.wait(5000):
+                QMessageBox.information(
+                    self, "AI operation still running",
+                    "An AI operation is still running. Please wait for it to finish before closing PhotoEditor.",
+                )
+                event.ignore()
+                return
         event.accept()
