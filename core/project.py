@@ -56,7 +56,9 @@ def load_project(document, path):
     source = _decode_image(data.get("image_png"))
     if source is None:
         raise ValueError("The project does not contain a readable source image.")
-    working = _decode_image(data.get("working_image_png")) or source.copy()
+    working = _decode_image(data.get("working_image_png"))
+    if working is None:
+        working = source.copy()
 
     document.original_image = source
     document.working_image = working
@@ -70,11 +72,17 @@ def load_project(document, path):
 
     document.adjustments = Adjustments.from_dict(data.get("adjustments", {}))
     document.history.clear()
-    document._working_history.clear()
+    if not hasattr(document, "_working_history"):
+        document._working_history = {}
+    else:
+        document._working_history.clear()
     document.history.push(document.adjustments)
     document._working_history[document.history._index] = document.working_image
-    document._preview_source = None
-    document.render_cache.clear()
-    document.preview_cache.clear()
+    if hasattr(document, "_preview_source"):
+        document._preview_source = None
+    for cache_name in ("render_cache", "preview_cache"):
+        cache = getattr(document, cache_name, None)
+        if cache is not None:
+            cache.clear()
     document.dirty = False
     return document
