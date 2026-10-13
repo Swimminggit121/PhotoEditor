@@ -66,24 +66,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install compact CPU PyTorch AI runtime
+      - name: Install CPU PyTorch and DETR runtime
         run: |
-          # Keep the all-in-one consumer download below GitHub's 2 GiB per-asset limit.
-          # The AI runtime automatically falls back to CPU when CUDA is unavailable.
+          # CPU runtime keeps the consumer executable broadly compatible.
+          # The runtime selects CUDA only in a separately configured CUDA-enabled environment.
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install ultralytics huggingface-hub
+          pip install transformers safetensors huggingface-hub
+      - name: Verify model metadata and SafeTensors availability
+        run: |
+          python -c "from huggingface_hub import model_info; info = model_info('facebook/detr-resnet-50'); print('Model:', info.id); print('Revision:', info.sha); print('SafeTensors:', bool(info.safetensors))"
+          python -c "from ai.config import MODEL_SPECS; assert MODEL_SPECS[0].model_id == 'facebook/detr-resnet-50'; assert MODEL_SPECS[0].weights_license.startswith('Apache-2.0')"
       - name: Install packager
         run: pip install pyinstaller
-      - name: Download the built-in vision model
-        shell: pwsh
-        run: |
-          python -c "from ultralytics import YOLO; YOLO('yolo11n-seg.pt')"
-          if (!(Test-Path "yolo11n-seg.pt")) { throw "YOLO11 segmentation model was not downloaded" }
       - name: Build consumer AI executable
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name PhotoEditor-AI --add-data "yolo11n-seg.pt;ai_bundle" --collect-all torch --collect-all torchvision --collect-all ultralytics --collect-data cv2 main.py
-      - name: Verify AI executable exists
+          pyinstaller --noconfirm --clean --onefile --windowed --name PhotoEditor-AI --collect-all torch --collect-all torchvision --collect-all transformers --collect-all tokenizers --collect-all safetensors --collect-all huggingface_hub --collect-data cv2 main.py
+      - name: Verify AI executable exists and size
         shell: pwsh
         run: |
           if (!(Test-Path "dist/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
@@ -99,8 +98,7 @@ jobs:
   create-release:
     runs-on: windows-latest
     needs: [windows-build, windows-ai-build]
-    # Public AI release is gated until the bundled Ultralytics YOLO licensing is resolved.
-    if: (startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')) && vars.ALLOW_YOLO_RELEASE == 'true'
+    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
