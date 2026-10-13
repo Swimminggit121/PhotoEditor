@@ -76,6 +76,10 @@ jobs:
           # The app uses CUDA when a compatible NVIDIA driver/GPU is present and falls back to CPU otherwise.
           pip install torch torchvision
           pip install transformers safetensors huggingface-hub
+      - name: Verify CUDA-capable PyTorch and CPU fallback environment
+        run: |
+          python -c "import torch; print('PyTorch:', torch.__version__); print('CUDA runtime:', torch.version.cuda); print('CUDA available on runner:', torch.cuda.is_available()); assert torch.version.cuda is not None"
+          python tests/ai_test.py
       - name: Verify model metadata and SafeTensors availability
         run: |
           python -c "from huggingface_hub import model_info; from ai.config import MODEL_SPECS; spec = MODEL_SPECS[0]; info = model_info(spec.model_id, revision=spec.revision); print('Model:', info.id); print('Pinned revision:', info.sha); print('SafeTensors:', bool(info.safetensors)); assert info.sha == spec.revision; assert bool(info.safetensors)"
@@ -85,7 +89,7 @@ jobs:
       - name: Build CUDA-capable AI application bundle
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --onedir --windowed --name PhotoEditor-AI --collect-all torch --collect-all torchvision --collect-all transformers --collect-all tokenizers --collect-all safetensors --collect-all huggingface_hub --collect-data cv2 main.py
+          pyinstaller --noconfirm --clean --onedir --windowed --name PhotoEditor-AI --collect-all torch --collect-all torchvision --collect-all nvidia --collect-all transformers --collect-all tokenizers --collect-all safetensors --collect-all huggingface_hub --collect-data cv2 main.py
       - name: Package and verify AI application bundle
         shell: pwsh
         run: |
