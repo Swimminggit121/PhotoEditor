@@ -40,7 +40,7 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-ai.txt
 ```
 
-For GPU acceleration, install the CUDA-enabled PyTorch wheel appropriate to your NVIDIA driver and supported CUDA version from the official PyTorch installation selector. If CUDA is not available, PhotoEditor automatically selects CPU. The CI-built consumer AI executable uses CPU-only PyTorch to keep packaging predictable; that executable does not provide CUDA acceleration. The Python runtime automatically selects CUDA when a compatible CUDA-enabled PyTorch build and NVIDIA driver are available, otherwise CPU is used. The current CI-built AI executable uses CPU-only PyTorch, so CUDA acceleration is not available in that specific executable yet; do not advertise it as GPU-accelerated.
+For GPU acceleration, install the CUDA-enabled PyTorch wheel appropriate to your NVIDIA driver and supported CUDA version from the official PyTorch installation selector. If CUDA is not available, PhotoEditor automatically selects CPU. The CI-built consumer AI executable uses CPU-only PyTorch to keep packaging predictable; that executable does not provide CUDA acceleration. The AI build workflow now packages a CUDA-capable PyTorch runtime in an onedir Windows bundle. It should select CUDA when a compatible NVIDIA driver/GPU is available and otherwise use CPU. GitHub-hosted CI has no NVIDIA GPU, so actual GPU inference must still be validated on a suitable Windows machine before public release.
 
 ## Run
 
@@ -50,7 +50,7 @@ python main.py
 
 ## Windows build
 
-GitHub Actions builds PhotoEditor.exe, VideoEditor.exe, PhotoEditorSuite.exe and a separate PhotoEditor-AI.exe artifact. The AI executable downloads DETR weights on first AI use rather than embedding weights into the release binary. The release workflow includes an executable-size guard and a separate ALLOW_AI_RELEASE approval gate while dataset provenance, final packaging, and CUDA-enabled executable support remain under review.
+GitHub Actions builds PhotoEditor.exe, VideoEditor.exe and PhotoEditorSuite.exe, plus a separate PhotoEditor-AI-Windows.zip bundle containing PhotoEditor-AI.exe and its CUDA-capable runtime. The AI bundle downloads DETR weights on first AI use rather than embedding model weights into the release archive. The release workflow includes an executable-size guard and a separate ALLOW_AI_RELEASE approval gate while dataset provenance, final packaging, and CUDA-enabled executable support remain under review.
 
 ## Project structure
 
