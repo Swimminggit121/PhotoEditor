@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from PIL import Image
 from PySide6.QtCore import QThread, Signal, QObject, Slot
 from PySide6.QtWidgets import QGroupBox,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QProgressBar,QFileDialog,QComboBox,QMessageBox
 from ai.analysis import analyze_image
@@ -83,7 +84,8 @@ class AIPanel(QGroupBox):
         path,_=QFileDialog.getOpenFileName(self,"Choose Reference Image","","Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)")
         if not path:return
         try:
-            ref=__import__("PIL.Image",fromlist=["Image"]).Image.open(path).convert("RGB")
+            with Image.open(path) as opened:
+                ref=opened.convert("RGB")
             sim=reference_similarity(image,ref);self.status.setText(f"Reference similarity: {sim*100:.1f}%")
             self.grade_ready.emit(reference_grade(image,ref))
         except Exception as e:QMessageBox.warning(self,"Reference Match",str(e))
