@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "application": "PhotoEditor AI",
+  "model": "facebook/detr-resnet-50",
+  "revision": "1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b",
+  "weights_file": "model.safetensors",
+  "weights_sha256": "830f5e2eeaada8c8c8281779dcc8ab12833972eb8514ed0a35be6c1d4420ad81",
+  "model_repository_declared_license": "Apache-2.0",
+  "implementation": "Hugging Face Transformers",
+  "implementation_license": "Apache-2.0",
+  "weights_included_in_application_zip": false,
+  "first_run_network_required": true,
+  "first_run_download_is_hash_verified": true,
+  "runtime_device_policy": "CUDA when available; otherwise CPU",
+  "training_data_note": "Model card identifies COCO 2017. COCO annotations are CC BY 4.0; images remain under original rights-holder/Flickr terms. This does not resolve all model-training provenance questions.",
+  "license_review_status": "Pending qualified review before commercial AI distribution"
+}
