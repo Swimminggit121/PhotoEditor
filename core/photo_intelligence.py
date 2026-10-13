@@ -53,9 +53,19 @@ def hamming_distance(a: np.ndarray, b: np.ndarray) -> int:
 def detect_faces_and_focal(image: Image.Image) -> tuple[int, float, float]:
     small = _small(image, 900)
     gray = cv2.cvtColor(np.asarray(small), cv2.COLOR_RGB2GRAY)
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    cascade = cv2.CascadeClassifier(cascade_path)
-    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24))
+    faces = []
+    # Face cascades are optional in some OpenCV builds; never fail folder analysis
+    # just because the classifier API or its bundled XML data is missing.
+    try:
+        if hasattr(cv2, "CascadeClassifier") and hasattr(cv2, "data"):
+            cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            cascade = cv2.CascadeClassifier(cascade_path)
+            if not cascade.empty():
+                faces = cascade.detectMultiScale(
+                    gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24)
+                )
+    except Exception:
+        faces = []
     if len(faces):
         areas = [(w * h, x + w / 2, y + h / 2) for x, y, w, h in faces]
         area, x, y = max(areas)
