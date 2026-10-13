@@ -1,10 +1,10 @@
 # Third-party software and model notices
 
-This inventory is for the AI release branch. Verify exact versions, artefacts, and upstream notices again before each public release. This document is not legal advice.
+This inventory is for the AI release branch. Verify exact versions, artefacts, and upstream notices again before each public release. This document is not legal advice. The application custom licence was updated to reserve paid official distribution to the copyright holder; have the terms reviewed before selling the application.
 
 | Component | Role | Code / artefact licence status | Source | Distribution note |
 |---|---|---|---|---|
-| PhotoEditor | Main application | Custom source-available licence in LICENSE | This repository | Use and commercial use of edited photos are permitted by the custom terms; selling the application itself is prohibited. |
+| PhotoEditor | Main application | Custom source-available licence in LICENSE | This repository | Use and commercial use of edited photos are permitted. The copyright holder may sell official editions; recipients may share free copies but may not resell the application. |
 | Hugging Face Transformers | DETR implementation and model loading | Apache-2.0 project licence | https://github.com/huggingface/transformers | Preserve required upstream notices for distributed components. |
 | facebook/detr-resnet-50 | Pretrained object detector | Official model repository declares Apache-2.0; application requests SafeTensors weights | https://huggingface.co/facebook/detr-resnet-50 | Model card states training on COCO 2017. Review dataset provenance and terms separately. |
 | PyTorch | Tensor operations and inference | Upstream BSD-style licence and notices apply | https://github.com/pytorch/pytorch | Verify exact installed wheel and bundled notices. |
@@ -24,9 +24,9 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 
 - [ ] Confirm no imports, dependencies, downloads or bundled files for Ultralytics/YOLO remain.
 - [ ] Pin and record the exact Hugging Face model revision and SafeTensors checksum for each release.
-- [ ] Review COCO 2017 dataset terms/provenance separately from the model repository's declared licence.
+- [ ] Review COCO 2017 dataset terms/provenance separately from the model repository's declared licence. Keep ALLOW_AI_RELEASE unset until reviewed.
 - [ ] Generate a licence inventory/SBOM for the exact frozen executable, including transitive packages and notices.
 - [ ] Include required third-party notices and licence texts in release materials.
 - [ ] Run AI, mask, smoke and packaging tests on Windows.
-- [ ] Verify executable size, first-run model download, offline cached inference, CPU fallback and NVIDIA CUDA in a CUDA-enabled environment.
+- [ ] Verify executable size, first-run model download, offline cached inference and CPU fallback. NVIDIA CUDA is supported by a compatible Python runtime; the current packaged AI executable is CPU-only.
 - [ ] Do not describe the current heuristic sky mask or GrabCut mask as a fully learned segmentation model.
