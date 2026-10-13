@@ -1,10 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Any
-import numpy as np
 import cv2
+import numpy as np
 from PIL import Image
-from .runtime import device
 from .model_manager import ModelManager
 
 @dataclass
@@ -29,7 +28,10 @@ class AIAnalysis:
     backend: str = "heuristic"
 
 def _rgb(image):
-    return np.asarray(image.convert("RGB") if hasattr(image, "convert") else Image.open(image).convert("RGB"))
+    if isinstance(image, (str, bytes)):
+        with Image.open(image) as opened:
+            return np.asarray(opened.convert("RGB"))
+    return np.asarray(image.convert("RGB") if hasattr(image, "convert") else image)
 
 def quality_analysis(image) -> dict[str, float]:
     a = _rgb(image)
@@ -38,21 +40,17 @@ def quality_analysis(image) -> dict[str, float]:
     sharp = float(np.clip(100 * np.log1p(lap) / np.log1p(900), 0, 100))
     noise = float(np.clip(100 / (1 + np.std(cv2.GaussianBlur(gray, (3, 3), 0) - gray)), 0, 100))
     mean = float(gray.mean())
-    under = float((gray < 10).mean())
-    over = float((gray > 245).mean())
+    under, over = float((gray < 10).mean()), float((gray > 245).mean())
     exposure = float(np.clip(100 * (1 - abs(mean - 128) / 128) * (1 - min(1, under + over)), 0, 100))
-    gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0)
-    gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1)
-    edge = np.hypot(gx, gy)
-    composition = float(np.clip(np.percentile(edge, 75) / 2.4, 0, 100))
+    gx, gy = cv2.Sobel(gray, cv2.CV_32F, 1, 0), cv2.Sobel(gray, cv2.CV_32F, 0, 1)
+    composition = float(np.clip(np.percentile(np.hypot(gx, gy), 75) / 2.4, 0, 100))
     total = sharp * .42 + exposure * .35 + noise * .08 + composition * .15
     return {"quality_score": float(total), "sharpness": sharp, "noise_score": noise,
             "exposure_score": exposure, "composition_score": composition}
 
 def detect_sky(image) -> np.ndarray:
     a = _rgb(image)
-    hsv = cv2.cvtColor(a, cv2.COLOR_RGB2HSV)
-    h, s, v = cv2.split(hsv)
+    h, s, v = cv2.split(cv2.cvtColor(a, cv2.COLOR_RGB2HSV))
     top = np.zeros(h.shape, np.uint8)
     cutoff = max(1, int(h.shape[0] * .55))
     blue = (h >= 85) & (h <= 135) & (s > 25) & (v > 70)
@@ -68,12 +66,10 @@ def detect_sky(image) -> np.ndarray:
     return cv2.GaussianBlur(mask, (0, 0), 1.2)
 
 def _detect_faces(gray):
-    """Face detection is optional: broken/missing OpenCV cascade data must not break analysis."""
     try:
         if not hasattr(cv2, "CascadeClassifier") or not hasattr(cv2, "data"):
             return []
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        detector = cv2.CascadeClassifier(cascade_path)
+        detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
         if detector.empty():
             return []
         return list(detector.detectMultiScale(gray, 1.1, 5, minSize=(28, 28)))
@@ -86,38 +82,28 @@ def analyze_image(image, use_ai=True) -> AIAnalysis:
     result = AIAnalysis(**q, sky_fraction=sky, suggestions=[])
     a = _rgb(image)
     gray = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY)
-    boxes = _detect_faces(gray)
-    result.faces = len(boxes)
-    detections = []
+    face_boxes = _detect_faces(gray)
+    result.faces = len(face_boxes)
+    detections: list[Detection] = []
     if use_ai:
         try:
-            model = ModelManager().load_detector()
-            prediction = model(a, device=device(), verbose=False)[0]
-            names = prediction.names
-            if prediction.boxes is not None:
-                for box in prediction.boxes:
-                    confidence = float(box.conf[0])
-                    if confidence < 0.30:
-                        continue
-                    x1, y1, x2, y2 = [float(value) for value in box.xyxy[0]]
-                    detections.append(Detection(str(names[int(box.cls[0])]), confidence,
-                        (x1 / a.shape[1], y1 / a.shape[0], x2 / a.shape[1], y2 / a.shape[0])))
-            result.backend = "yolo+opencv"
+            raw = ModelManager().load_detector().detect(a, threshold=0.30)
+            detections = [Detection(item["label"], item["confidence"], tuple(item["box"])) for item in raw]
+            result.backend = "detr+opencv"
         except Exception:
-            # AI packages/model weights are optional; the conventional editor remains usable.
-            result.backend = "opencv"
+            # Model download/runtime failures must not prevent standard editing.
+            result.backend = "opencv-fallback"
     result.detections = detections
     if detections:
         ranked = sorted(detections, key=lambda item: item.confidence *
-                        (item.box[2] - item.box[0]) * (item.box[3] - item.box[1]), reverse=True)
+                        max(0.0, item.box[2] - item.box[0]) * max(0.0, item.box[3] - item.box[1]), reverse=True)
         result.subject_box = ranked[0].box
-    elif boxes:
-        x, y, w, h = max(boxes, key=lambda item: item[2] * item[3])
-        result.subject_box = (x / a.shape[1], y / a.shape[0],
-                              (x + w) / a.shape[1], (y + h) / a.shape[0])
+    elif face_boxes:
+        x, y, w, h = max(face_boxes, key=lambda item: item[2] * item[3])
+        result.subject_box = (x / a.shape[1], y / a.shape[0], (x + w) / a.shape[1], (y + h) / a.shape[0])
     saturation = float(cv2.cvtColor(a, cv2.COLOR_RGB2HSV)[..., 1].mean())
-    result.scene = "Landscape" if sky > .08 else (
-        "Portrait" if boxes else ("Low light" if q["exposure_score"] < 45 else "General"))
+    result.scene = "Landscape" if sky > .08 else ("Portrait" if face_boxes else
+        ("Low light" if q["exposure_score"] < 45 else "General"))
     if q["exposure_score"] < 65:
         result.suggestions.append({"type": "exposure", "value": float(np.clip((50 - q["exposure_score"]) * .55, -25, 25))})
     if q["sharpness"] < 45:
