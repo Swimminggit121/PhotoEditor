@@ -22,13 +22,13 @@ Photos are processed locally. The first use of the AI detector requires an inter
 
 The YOLO/Ultralytics dependency has been removed from the AI branch. Object detection uses facebook/detr-resnet-50 through Hugging Face Transformers.
 
-- **Application licence:** LICENSE contains PhotoEditor's custom source-available licence. It permits use of the application and commercial use of edited photographs, but prohibits selling PhotoEditor itself.
+- **Application licence:** LICENSE contains PhotoEditor's custom source-available licence. It permits use of the application and commercial use of edited photographs, but reserves paid official distribution to the copyright holder while permitting free sharing by recipients.
 - **Implementation code:** Hugging Face Transformers is licensed under Apache-2.0. DETR model implementation is provided through Transformers.
 - **Model weights:** the official facebook/detr-resnet-50 repository declares Apache-2.0 and provides SafeTensors weights. The application requests SafeTensors rather than legacy pickle weights.
 - **Training-data provenance:** the model card says the model was trained on COCO 2017. Dataset terms and provenance are a separate question from the model repository's declared licence and must be reviewed before commercial distribution.
 - **Other dependencies:** PyTorch, torchvision, Hugging Face Hub, SafeTensors and all bundled libraries retain their own licences. See THIRD_PARTY_NOTICES.md and re-check versions before each public release.
 
-The licence audit is an engineering checklist, not legal advice. The custom PhotoEditor licence is source-available and is not an OSI-approved open-source licence.
+The copyright holder may charge for official editions under the updated custom licence; recipients may share free copies but may not resell the application. The licence audit is an engineering checklist, not legal advice. The custom PhotoEditor licence is source-available and is not an OSI-approved open-source licence.
 
 ## Optional AI installation
 
@@ -40,7 +40,7 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-ai.txt
 ```
 
-For GPU acceleration, install the CUDA-enabled PyTorch wheel appropriate to your NVIDIA driver and supported CUDA version from the official PyTorch installation selector. If CUDA is not available, PhotoEditor automatically selects CPU. The CI-built consumer AI executable uses CPU-only PyTorch to keep packaging predictable; that executable does not provide CUDA acceleration. A future GPU-enabled executable must be built and tested separately rather than claiming GPU support from CPU-only binaries.
+For GPU acceleration, install the CUDA-enabled PyTorch wheel appropriate to your NVIDIA driver and supported CUDA version from the official PyTorch installation selector. If CUDA is not available, PhotoEditor automatically selects CPU. The CI-built consumer AI executable uses CPU-only PyTorch to keep packaging predictable; that executable does not provide CUDA acceleration. The Python runtime automatically selects CUDA when a compatible CUDA-enabled PyTorch build and NVIDIA driver are available, otherwise CPU is used. The current CI-built AI executable uses CPU-only PyTorch, so CUDA acceleration is not available in that specific executable yet; do not advertise it as GPU-accelerated.
 
 ## Run
 
@@ -50,7 +50,7 @@ python main.py
 
 ## Windows build
 
-GitHub Actions builds PhotoEditor.exe, VideoEditor.exe, PhotoEditorSuite.exe and a separate PhotoEditor-AI.exe artifact. The AI executable downloads DETR weights on first AI use rather than embedding weights into the release binary. The release workflow includes an executable-size guard; an artifact must pass CI before being published.
+GitHub Actions builds PhotoEditor.exe, VideoEditor.exe, PhotoEditorSuite.exe and a separate PhotoEditor-AI.exe artifact. The AI executable downloads DETR weights on first AI use rather than embedding weights into the release binary. The release workflow includes an executable-size guard and a separate ALLOW_AI_RELEASE approval gate while dataset provenance, final packaging, and CUDA-enabled executable support remain under review.
 
 ## Project structure
 
