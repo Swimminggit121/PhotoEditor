@@ -86,8 +86,10 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "dist/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
-          $size = (Get-Item "dist/PhotoEditor-AI.exe").Length / 1MB
-          Write-Host ("PhotoEditor-AI.exe size: {0:N1} MB" -f $size)
+          $sizeBytes = (Get-Item "dist/PhotoEditor-AI.exe").Length
+          $sizeMB = $sizeBytes / 1MB
+          Write-Host ("PhotoEditor-AI.exe size: {0:N1} MB" -f $sizeMB)
+          if ($sizeBytes -ge 1800MB) { throw "PhotoEditor-AI.exe is too large for a reliable GitHub release asset; reduce bundled dependencies." }
       - uses: actions/upload-artifact@v4
         with:
           name: PhotoEditor-AI-Windows
