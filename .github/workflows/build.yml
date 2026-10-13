@@ -106,6 +106,9 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "dist/PhotoEditor-AI/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
+          foreach ($required in @("THIRD_PARTY_NOTICES.md", "AI_MODEL_MANIFEST.json", "third-party-licenses.json")) {
+            if (!(Test-Path ("dist/PhotoEditor-AI/" + $required))) { throw ("Required release file missing: " + $required) }
+          }
           Compress-Archive -Path "dist/PhotoEditor-AI/*" -DestinationPath "dist/PhotoEditor-AI-Windows.zip" -CompressionLevel Optimal -Force
           $sizeBytes = (Get-Item "dist/PhotoEditor-AI-Windows.zip").Length
           $sizeMB = $sizeBytes / 1MB
