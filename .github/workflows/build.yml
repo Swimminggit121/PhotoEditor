@@ -98,8 +98,10 @@ jobs:
         run: |
           pip install pip-licenses
           Copy-Item "THIRD_PARTY_NOTICES.md" "dist/PhotoEditor-AI/THIRD_PARTY_NOTICES.md"
+          Copy-Item "AI_MODEL_MANIFEST.json" "dist/PhotoEditor-AI/AI_MODEL_MANIFEST.json"
           pip-licenses --format=json --output-file "dist/PhotoEditor-AI/third-party-licenses.json"
           if (!(Test-Path "dist/PhotoEditor-AI/third-party-licenses.json")) { throw "Dependency licence inventory was not generated" }
+          if (!(Test-Path "dist/PhotoEditor-AI/AI_MODEL_MANIFEST.json")) { throw "AI model manifest was not packaged" }
       - name: Package and verify AI application bundle
         shell: pwsh
         run: |
