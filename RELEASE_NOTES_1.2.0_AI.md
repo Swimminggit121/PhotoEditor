@@ -8,8 +8,8 @@ This release adds a dedicated consumer-friendly **PhotoEditor-AI.exe**.
 - No Python installation.
 - No virtual environment.
 - No separate AI runtime setup.
-- CUDA-enabled PyTorch is bundled for supported NVIDIA GPUs.
-- CPU fallback is automatic.
+- A compact CPU-enabled PyTorch runtime is bundled so the single-file download stays below GitHub's 2 GiB per-asset limit.
+- The packaged executable uses CPU inference; CUDA acceleration is available only in a separately configured Python environment with a CUDA-enabled PyTorch build.
 - YOLO11 segmentation/object detection is bundled with the executable.
 - The bundled model is copied to the user's PhotoEditor AI cache on first AI use.
 - Larger optional models remain outside the executable so the main download stays practical.
