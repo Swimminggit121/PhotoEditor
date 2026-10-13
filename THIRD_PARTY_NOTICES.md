@@ -22,8 +22,9 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 
 ## Release gate checklist
 
-- [ ] Confirm no imports, dependencies, downloads or bundled files for Ultralytics/YOLO remain.
-- [ ] Pin and record the exact Hugging Face model revision and SafeTensors checksum for each release.
+- [x] Confirmed by source/requirements/build-workflow scan that no Ultralytics/YOLO imports, dependencies, downloads or bundled model files remain in this AI branch.
+- [x] Pin the model to immutable revision `1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b` and verify that revision has SafeTensors weights in CI.
+- [ ] Record a full SafeTensors SHA-256 checksum in the release manifest before public release.
 - [ ] Review COCO 2017 dataset terms/provenance separately from the model repository's declared licence. Keep ALLOW_AI_RELEASE unset until reviewed.
 - [ ] Generate a licence inventory/SBOM for the exact frozen executable, including transitive packages and notices.
 - [ ] Include required third-party notices and licence texts in release materials.
