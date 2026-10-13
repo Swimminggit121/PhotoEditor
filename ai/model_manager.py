@@ -1,5 +1,6 @@
 from __future__ import annotations
 import importlib.util
+import hashlib
 import json
 import threading
 from typing import Any
@@ -90,8 +91,25 @@ class ModelManager:
                     "The AI runtime is not installed. Install requirements-ai.txt or use the AI edition."
                 )
             import torch
+            from huggingface_hub import hf_hub_download
             from transformers import AutoImageProcessor, AutoModelForObjectDetection
             spec = MODEL_SPECS[0]
+            # Verify the exact checkpoint bytes before allowing the model loader to use them.
+            weight_path = hf_hub_download(
+                repo_id=spec.model_id,
+                filename="model.safetensors",
+                revision=spec.revision,
+            )
+            digest = hashlib.sha256()
+            with open(weight_path, "rb") as weight_file:
+                for chunk in iter(lambda: weight_file.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            actual_sha256 = digest.hexdigest()
+            if actual_sha256.lower() != spec.weights_sha256.lower():
+                raise RuntimeError(
+                    "The downloaded AI model failed its SHA-256 integrity check. "
+                    "Delete the cached model and try again; do not use this checkpoint."
+                )
             processor = AutoImageProcessor.from_pretrained(spec.model_id, revision=spec.revision)
             # SafeTensors avoids loading a legacy pickle checkpoint.
             model = AutoModelForObjectDetection.from_pretrained(
@@ -107,6 +125,7 @@ class ModelManager:
                 "source": spec.source_url,
                 "code_license": spec.code_license,
                 "weights_license": spec.weights_license,
+                "weights_sha256": actual_sha256,
                 "runtime_device": selected_device,
             }
             self._save()
