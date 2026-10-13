@@ -6,7 +6,7 @@ from typing import Any
 from .config import AI_DIR, MODEL_SPECS, ModelSpec
 
 class DETRDetector:
-    """Adapter around the Apache-2.0-declared facebook/detr-resnet-50 model."""
+    """Adapter around the pinned facebook/detr-resnet-50 checkpoint."""
     def __init__(self, processor: Any, model: Any, torch_module: Any, device: str):
         self.processor, self.model, self.torch, self.device = processor, model, torch_module, device
         self.model.eval()
@@ -15,6 +15,9 @@ class DETRDetector:
         import numpy as np
         from PIL import Image
         rgb = np.asarray(image.convert("RGB") if isinstance(image, Image.Image) else image)
+        if rgb.ndim != 3 or rgb.shape[2] < 3:
+            raise ValueError("Expected an RGB image with three colour channels.")
+        rgb = rgb[..., :3].astype(np.uint8, copy=False)
         height, width = rgb.shape[:2]
         inputs = self.processor(images=Image.fromarray(rgb), return_tensors="pt")
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
@@ -45,7 +48,7 @@ class DETRDetector:
         return detections
 
 class ModelManager:
-    """Loads the optional local DETR model and records its source and terms."""
+    """Loads a pinned local DETR checkpoint and records model provenance."""
     _detector = None
     _detector_lock = threading.RLock()
 
@@ -70,6 +73,7 @@ class ModelManager:
             return (
                 importlib.util.find_spec("transformers") is not None
                 and bool(self._data.get(spec.key, {}).get("downloaded", False))
+                and self._data.get(spec.key, {}).get("revision") == spec.revision
             )
         except (ImportError, ValueError):
             return False
@@ -88,15 +92,18 @@ class ModelManager:
             import torch
             from transformers import AutoImageProcessor, AutoModelForObjectDetection
             spec = MODEL_SPECS[0]
-            processor = AutoImageProcessor.from_pretrained(spec.model_id)
-            # Require SafeTensors so a legacy pickle checkpoint is never silently loaded.
-            model = AutoModelForObjectDetection.from_pretrained(spec.model_id, use_safetensors=True)
+            processor = AutoImageProcessor.from_pretrained(spec.model_id, revision=spec.revision)
+            # SafeTensors avoids loading a legacy pickle checkpoint.
+            model = AutoModelForObjectDetection.from_pretrained(
+                spec.model_id, revision=spec.revision, use_safetensors=True
+            )
             selected_device = "cuda" if torch.cuda.is_available() else "cpu"
             model.to(selected_device)
             detector = DETRDetector(processor, model, torch, selected_device)
             self._data[spec.key] = {
                 "downloaded": True,
                 "model": spec.model_id,
+                "revision": spec.revision,
                 "source": spec.source_url,
                 "code_license": spec.code_license,
                 "weights_license": spec.weights_license,
