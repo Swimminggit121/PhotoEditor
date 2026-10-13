@@ -40,7 +40,7 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-ai.txt
 ```
 
-For GPU acceleration, install the CUDA-enabled PyTorch wheel appropriate to your NVIDIA driver and supported CUDA version from the official PyTorch installation selector. If CUDA is not available, PhotoEditor automatically selects CPU. The CI-built consumer AI executable uses CPU-only PyTorch to keep packaging predictable; that executable does not provide CUDA acceleration. The AI build workflow now packages a CUDA-capable PyTorch runtime in an onedir Windows bundle. It should select CUDA when a compatible NVIDIA driver/GPU is available and otherwise use CPU. GitHub-hosted CI has no NVIDIA GPU, so actual GPU inference must still be validated on a suitable Windows machine before public release.
+For GPU acceleration, the AI edition bundles a CUDA-capable PyTorch runtime and automatically selects CUDA when a compatible NVIDIA GPU and driver are available; otherwise it selects CPU. The standard edition remains separate and lightweight. GitHub-hosted CI does not provide a physical NVIDIA GPU, so actual GPU inference and CPU fallback still need to be validated on Windows hardware before public release.
 
 ## Run
 
