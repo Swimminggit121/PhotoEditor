@@ -15,7 +15,11 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 | Pillow | Image loading/conversion | HPND licence | https://github.com/python-pillow/Pillow | Keep upstream notices for distributed copies. |
 | NumPy | Numerical operations | BSD-style licence | https://github.com/numpy/numpy | Keep upstream notices for distributed copies. |
 
-## Dataset provenance notes\n\nThe upstream [COCO Terms of Use](https://cocodataset.org/#termsofuse) distinguish the annotations from the images: COCO annotations are CC BY 4.0, while the image copyrights remain with their original rights holders and use is subject to the relevant Flickr terms/licences. This is a provenance summary, not a legal conclusion about model training or commercial distribution. A qualified review is still required before selling/distributing the AI edition.\n\n## Explicitly removed from this branch
+## Dataset provenance notes
+
+The upstream [COCO Terms of Use](https://cocodataset.org/#termsofuse) distinguish the annotations from the images: COCO annotations are CC BY 4.0, while the image copyrights remain with their original rights holders and use is subject to the relevant Flickr terms/licences. This is a provenance summary, not a legal conclusion about model training or commercial distribution. A qualified review is still required before selling/distributing the AI edition.
+
+## Explicitly removed from this branch
 
 - Ultralytics package and YOLO model weights are no longer intended parts of the AI runtime.
 - No YOLO weights should be bundled or downloaded by this branch. Search source, requirements, workflow logs and built artifacts before release to verify no stale references remain.
