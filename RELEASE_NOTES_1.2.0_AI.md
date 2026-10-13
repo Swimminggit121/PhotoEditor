@@ -1,39 +1,38 @@
 # PhotoEditor 1.2.0 — AI Windows Build
 
-This release adds a dedicated consumer-friendly **PhotoEditor-AI.exe**.
+This branch is preparing a consumer-friendly PhotoEditor-AI.exe.
 
-## Consumer experience
+## Current architecture
 
-- One Windows executable.
-- No Python installation.
-- No virtual environment.
-- No separate AI runtime setup.
-- A compact CPU-enabled PyTorch runtime is bundled so the single-file download stays below GitHub's 2 GiB per-asset limit.
-- The packaged executable uses CPU inference; CUDA acceleration is available only in a separately configured Python environment with a CUDA-enabled PyTorch build.
-- YOLO11 segmentation/object detection is bundled with the executable.
-- The bundled model is copied to the user's PhotoEditor AI cache on first AI use.
-- Larger optional models remain outside the executable so the main download stays practical.
+- The base editor remains usable without AI dependencies.
+- Object detection uses facebook/detr-resnet-50 through Hugging Face Transformers.
+- DETR weights are downloaded on first AI use and cached locally.
+- SafeTensors loading is required; legacy pickle-based checkpoints are not requested.
+- The AI executable currently bundles CPU-only PyTorch to keep packaging predictable. It does not use CUDA.
+- In a Python environment with a compatible CUDA-enabled PyTorch build and NVIDIA driver, the AI runtime selects CUDA automatically and falls back to CPU if CUDA is unavailable.
 
-## AI features in this build
+## AI capabilities and limitations
 
-- Subject/object detection.
-- Person and face-aware analysis.
-- Subject masking.
-- Sky masking.
-- Smart crop with detected subject positioning.
-- Image quality scoring.
-- Sharpness/noise/exposure/composition analysis.
-- AI-assisted grading.
-- Reference matching.
-- Local denoise.
-- Upscaling.
-- AI model caching.
+- Object detection and subject focal-box estimation.
+- Face-aware analysis using the existing OpenCV cascade fallback.
+- Subject masking by combining detection boxes with GrabCut; this is not a dedicated learned segmentation model.
+- Sky masking using a colour/position heuristic, not learned semantic segmentation.
+- Smart crop, image quality scoring, exposure suggestions, AI-assisted grading, reference matching, local denoise and upscaling pipeline.
+- Model caching and offline inference after model files have been downloaded.
 
-## Files
+## Licensing status
 
-- `PhotoEditor-AI.exe` — recommended build for users who want AI.
-- `PhotoEditor.exe` — standard lightweight build.
-- `VideoEditor.exe`
-- `PhotoEditorSuite.exe`
+- YOLO/Ultralytics code and weights have been removed from the intended AI runtime.
+- The official facebook/detr-resnet-50 model repository declares Apache-2.0 and provides SafeTensors weights.
+- COCO 2017 dataset provenance/terms and the complete frozen-executable dependency inventory still require review.
+- Public AI release is gated by the ALLOW_AI_RELEASE repository variable until the remaining licensing and packaging checks are complete.
+- The PhotoEditor custom licence permits the copyright holder to sell official editions; recipients may share free copies but may not resell the application. This custom licence should receive qualified legal review before commercial distribution.
 
-The AI executable is intentionally a single-file Windows application. Heavy optional VLM/embedding models are downloaded only when those advanced capabilities are enabled in future AI modules.
+## Planned assets after verification
+
+- PhotoEditor.exe — standard lightweight build.
+- PhotoEditor-AI.exe — AI-enabled CPU build.
+- VideoEditor.exe
+- PhotoEditorSuite.exe
+
+The AI build is not considered release-ready until Windows tests, size checks, first-run model download, cached inference, notices and the release gate have been reviewed.
