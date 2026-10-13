@@ -48,9 +48,9 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-ai.txt
 ```
 
-The first detector inference can download its model automatically. Model files are kept outside the repository so they are not bundled into Git or every Windows executable.
+The first detector inference can download its model automatically in a Python installation. Model files are kept outside the repository so they are not bundled into Git or every Windows executable.
 
-For NVIDIA systems, the installed PyTorch build should provide CUDA support; PhotoEditor automatically selects CUDA when PyTorch reports a CUDA-capable device and otherwise uses CPU.
+The consumer AI executable bundles the compact CPU PyTorch runtime to keep the download below GitHub's 2 GiB per-file release limit. It works without Python or a separate runtime install, but that bundled executable does not use CUDA. A separately configured Python environment can use an NVIDIA GPU when installed with a CUDA-enabled PyTorch build.
 
 ## Run
 
@@ -65,8 +65,9 @@ GitHub Actions builds:
 - PhotoEditor.exe
 - VideoEditor.exe
 - PhotoEditorSuite.exe
+- PhotoEditor-AI.exe on the dedicated AI release branch (CPU AI runtime included)
 
-The base Windows executable deliberately does not bundle large optional AI model weights. Install the optional AI environment separately when local AI features are required.
+The base Windows executable deliberately does not bundle large optional AI model weights. The dedicated AI executable bundles the core YOLO model and CPU AI runtime.
 
 ## Project structure
 
