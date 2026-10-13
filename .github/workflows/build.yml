@@ -70,11 +70,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install CPU PyTorch and DETR runtime
+      - name: Install CUDA-capable PyTorch and DETR runtime
         run: |
-          # CPU runtime keeps the consumer executable broadly compatible.
-          # The runtime selects CUDA only in a separately configured CUDA-enabled environment.
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          # Standard Windows PyTorch wheels include CUDA runtime libraries where supported.
+          # The app uses CUDA when a compatible NVIDIA driver/GPU is present and falls back to CPU otherwise.
+          pip install torch torchvision
           pip install transformers safetensors huggingface-hub
       - name: Verify model metadata and SafeTensors availability
         run: |
@@ -82,22 +82,23 @@ jobs:
           python -c "from ai.config import MODEL_SPECS; assert MODEL_SPECS[0].model_id == 'facebook/detr-resnet-50'; assert len(MODEL_SPECS[0].revision) == 40; assert MODEL_SPECS[0].weights_license.startswith('Apache-2.0')"
       - name: Install packager
         run: pip install pyinstaller
-      - name: Build consumer AI executable
+      - name: Build CUDA-capable AI application bundle
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name PhotoEditor-AI --collect-all torch --collect-all torchvision --collect-all transformers --collect-all tokenizers --collect-all safetensors --collect-all huggingface_hub --collect-data cv2 main.py
-      - name: Verify AI executable exists and size
+          pyinstaller --noconfirm --clean --onedir --windowed --name PhotoEditor-AI --collect-all torch --collect-all torchvision --collect-all transformers --collect-all tokenizers --collect-all safetensors --collect-all huggingface_hub --collect-data cv2 main.py
+      - name: Package and verify AI application bundle
         shell: pwsh
         run: |
-          if (!(Test-Path "dist/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
-          $sizeBytes = (Get-Item "dist/PhotoEditor-AI.exe").Length
+          if (!(Test-Path "dist/PhotoEditor-AI/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
+          Compress-Archive -Path "dist/PhotoEditor-AI/*" -DestinationPath "dist/PhotoEditor-AI-Windows.zip" -CompressionLevel Optimal -Force
+          $sizeBytes = (Get-Item "dist/PhotoEditor-AI-Windows.zip").Length
           $sizeMB = $sizeBytes / 1MB
-          Write-Host ("PhotoEditor-AI.exe size: {0:N1} MB" -f $sizeMB)
-          if ($sizeBytes -ge 1800MB) { throw "PhotoEditor-AI.exe is too large for a reliable GitHub release asset; reduce bundled dependencies." }
+          Write-Host ("PhotoEditor-AI-Windows.zip size: {0:N1} MB" -f $sizeMB)
+          if ($sizeBytes -ge 1800MB) { throw "AI application bundle exceeds GitHub's reliable single-asset size limit." }
       - uses: actions/upload-artifact@v4
         with:
           name: PhotoEditor-AI-Windows
-          path: dist/PhotoEditor-AI.exe
+          path: dist/PhotoEditor-AI-Windows.zip
 
   create-release:
     runs-on: windows-latest
@@ -126,7 +127,7 @@ jobs:
           }
           gh release view "$tag" *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI.exe --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
+            gh release create "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI-Windows.zip --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
           } else {
-            gh release upload "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI.exe --clobber
+            gh release upload "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI-Windows.zip --clobber
           }
