@@ -99,7 +99,8 @@ jobs:
   create-release:
     runs-on: windows-latest
     needs: [windows-build, windows-ai-build]
-    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')
+    # Public AI release is gated until the bundled Ultralytics YOLO licensing is resolved.
+    if: (startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')) && vars.ALLOW_YOLO_RELEASE == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
