@@ -6,7 +6,7 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 |---|---|---|---|---|
 | PhotoEditor | Main application | Custom source-available licence in LICENSE | This repository | Use and commercial use of edited photos are permitted. The copyright holder may sell official editions; recipients may share free copies but may not resell the application. |
 | Hugging Face Transformers | DETR implementation and model loading | Apache-2.0 project licence | https://github.com/huggingface/transformers | Preserve required upstream notices for distributed components. |
-| facebook/detr-resnet-50 | Pretrained object detector | Official model repository declares Apache-2.0; application requests SafeTensors weights | https://huggingface.co/facebook/detr-resnet-50 | Model card states training on COCO 2017. Review dataset provenance and terms separately. |
+| facebook/detr-resnet-50 | Pretrained object detector | Official model repository declares Apache-2.0; application requests SafeTensors weights | https://huggingface.co/facebook/detr-resnet-50 | Pinned revision `1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b`; `model.safetensors` SHA-256: `830f5e2eeaada8c8c8281779dcc8ab12833972eb8514ed0a35be6c1d4420ad81`. Model card states training on COCO 2017; see dataset terms below. |
 | PyTorch | Tensor operations and inference | Upstream BSD-style licence and notices apply | https://github.com/pytorch/pytorch | Verify exact installed wheel and bundled notices. |
 | torchvision | Vision dependency | Upstream BSD-style licence and notices apply | https://github.com/pytorch/vision | Verify exact installed wheel and bundled notices. |
 | SafeTensors | Checkpoint format | Apache-2.0 | https://github.com/huggingface/safetensors | Keep upstream notices for distributed copies. |
@@ -15,7 +15,7 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 | Pillow | Image loading/conversion | HPND licence | https://github.com/python-pillow/Pillow | Keep upstream notices for distributed copies. |
 | NumPy | Numerical operations | BSD-style licence | https://github.com/numpy/numpy | Keep upstream notices for distributed copies. |
 
-## Explicitly removed from this branch
+## Dataset provenance notes\n\nThe upstream [COCO Terms of Use](https://cocodataset.org/#termsofuse) distinguish the annotations from the images: COCO annotations are CC BY 4.0, while the image copyrights remain with their original rights holders and use is subject to the relevant Flickr terms/licences. This is a provenance summary, not a legal conclusion about model training or commercial distribution. A qualified review is still required before selling/distributing the AI edition.\n\n## Explicitly removed from this branch
 
 - Ultralytics package and YOLO model weights are no longer intended parts of the AI runtime.
 - No YOLO weights should be bundled or downloaded by this branch. Search source, requirements, workflow logs and built artifacts before release to verify no stale references remain.
@@ -24,10 +24,10 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 
 - [x] Confirmed by source/requirements/build-workflow scan that no Ultralytics/YOLO imports, dependencies, downloads or bundled model files remain in this AI branch.
 - [x] Pin the model to immutable revision `1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b` and verify that revision has SafeTensors weights in CI.
-- [ ] Record a full SafeTensors SHA-256 checksum in the release manifest before public release.
+- [x] Record the pinned SafeTensors SHA-256 checksum in `ai/config.py`, verify it in CI and verify it again before first model use; record it in the local runtime manifest.
 - [ ] Review COCO 2017 dataset terms/provenance separately from the model repository's declared licence. Keep ALLOW_AI_RELEASE unset until reviewed.
-- [ ] Generate a licence inventory/SBOM for the exact frozen executable, including transitive packages and notices.
-- [ ] Include required third-party notices and licence texts in release materials.
+- [ ] Confirm the CI-generated `third-party-licenses.json` against the exact frozen AI bundle; this is a dependency licence inventory, not a formal SBOM.
+- [ ] Confirm required third-party notices and licence texts are present in the built release ZIP.
 - [ ] Run AI, mask, smoke and packaging tests on Windows.
 - [ ] Verify bundle size, first-run model download, offline cached inference and CPU fallback. The AI bundle now uses CUDA-capable PyTorch; validate NVIDIA GPU inference on a physical compatible Windows system before release.
 - [ ] Do not describe the current heuristic sky mask or GrabCut mask as a fully learned segmentation model.
