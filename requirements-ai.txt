@@ -1,8 +1,8 @@
-# Optional local AI acceleration. The base editor does not require these packages.
-# PyTorch wheels include the appropriate CUDA runtime for supported NVIDIA builds.
+# Optional local AI runtime. Model weights download on first AI use.
+# For NVIDIA acceleration, install a CUDA-enabled PyTorch build compatible with your driver.
+# CPU-only PyTorch is supported as a fallback.
 torch
 torchvision
-ultralytics
 transformers
-sentence-transformers
+safetensors
 huggingface-hub
