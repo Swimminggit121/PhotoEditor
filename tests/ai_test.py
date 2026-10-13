@@ -18,6 +18,8 @@ assert isinstance(info.gpu_name, str)
 assert MODEL_SPECS[0].package == "transformers"
 assert MODEL_SPECS[0].model_id == "facebook/detr-resnet-50"
 assert len(MODEL_SPECS[0].revision) == 40
+assert len(MODEL_SPECS[0].weights_sha256) == 64
+assert all(character in "0123456789abcdef" for character in MODEL_SPECS[0].weights_sha256.lower())
 assert "Apache-2.0" in MODEL_SPECS[0].weights_license
 assert info.ultralytics is False
 assert quality_analysis(img)["quality_score"] == result.quality_score
