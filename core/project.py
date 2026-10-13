@@ -36,7 +36,6 @@ def save_project(document, path):
     data = {
         "version": PROJECT_VERSION,
         "source_path": str(document.path) if document.path else None,
-        # Keep image_png for compatibility with older project readers.
         "image_png": _image_bytes(document.original_image),
         "working_image_png": _image_bytes(working) if working is not document.original_image else None,
         "metadata_exif": base64.b64encode(getattr(document, "metadata", None)).decode("ascii") if getattr(document, "metadata", None) else None,
@@ -77,7 +76,9 @@ def load_project(document, path):
     else:
         document._working_history.clear()
     document.history.push(document.adjustments)
-    document._working_history[document.history._index] = document.working_image
+    history_index = getattr(document.history, "_index", None)
+    if history_index is not None:
+        document._working_history[history_index] = document.working_image
     if hasattr(document, "_preview_source"):
         document._preview_source = None
     if hasattr(document, "_original_preview_source"):
