@@ -21,6 +21,7 @@ class ModelSpec:
     purpose: str
     code_license: str
     weights_license: str
+    weights_sha256: str
     source_url: str
 
 # Pin to an immutable upstream model revision instead of following mutable "main".
@@ -35,6 +36,7 @@ MODEL_SPECS = (
         purpose="COCO object detection for people, animals, vehicles and common objects",
         code_license="Apache-2.0 (Hugging Face Transformers)",
         weights_license="Apache-2.0 as declared by the official model repository; COCO dataset provenance remains a separate review item",
+        weights_sha256="830f5e2eeaada8c8c8281779dcc8ab12833972eb8514ed0a35be6c1d4420ad81",
         source_url="https://huggingface.co/facebook/detr-resnet-50",
     ),
 )
