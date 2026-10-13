@@ -45,7 +45,7 @@ class AIPanel(QGroupBox):
         x=QPushButton("Denoise");x.clicked.connect(lambda:self.enhance(0.35,1));row3.addWidget(x)
         x=QPushButton("2× Upscale");x.clicked.connect(lambda:self.enhance(0,2));row3.addWidget(x);lay.addLayout(row3)
         info=runtime_info()
-        self.backend.setText(f"Runtime: {'CUDA / '+info.gpu_name if info.cuda else 'CPU'} | Detector: {'installed' if info.ultralytics else 'optional'}")
+        self.backend.setText(f"Runtime: {'CUDA / '+info.gpu_name if info.cuda else 'CPU'} | Detector: {'installed' if info.transformers else 'optional'}")
 
     def image(self):
         return self.window.document.original_image if self.window.document.has_image() else None
