@@ -4,13 +4,15 @@ Do not publish the AI edition until every required check below is complete. The 
 
 ## Automated checks
 
-- [ ] Latest `PhotoEditor CI` run passes all smoke, feature, batch, export, photo-intelligence, video, compile and AI fallback tests.
-- [ ] CUDA-capable PyTorch installs successfully on the Windows runner.
-- [ ] The pinned model revision matches the configured revision.
-- [ ] Downloaded `model.safetensors` matches the SHA-256 in `AI_MODEL_MANIFEST.json`.
-- [ ] AI onedir package builds and the ZIP remains below the configured size guard.
-- [ ] The ZIP contains `PhotoEditor-AI.exe`, `THIRD_PARTY_NOTICES.md`, `AI_MODEL_MANIFEST.json`, and `third-party-licenses.json`.
-- [ ] The regular PhotoEditor, VideoEditor and Suite EXEs build successfully.
+- [x] CI run [38393873581](https://github.com/Swimminggit121/PhotoEditor/actions/runs/38393873581) passed smoke, feature, batch, export, photo-intelligence, video, compile and AI fallback tests on Windows.
+- [x] CUDA-capable PyTorch installed successfully on the Windows runner; the runner itself did not provide a physical NVIDIA GPU.
+- [x] The pinned model revision matched the configured revision.
+- [x] Downloaded `model.safetensors` matched the SHA-256 in `AI_MODEL_MANIFEST.json`.
+- [x] AI onedir package built and the ZIP passed the configured size guard.
+- [x] Downloaded and inspected the actual CI artifact: the inner ZIP contains `PhotoEditor-AI.exe`, `THIRD_PARTY_NOTICES.md`, `AI_MODEL_MANIFEST.json`, and `third-party-licenses.json`; the ZIP contains 15,702 entries and is about 314.9 MiB.
+- [x] The regular PhotoEditor, VideoEditor and Suite EXEs built successfully.
+
+**Evidence:** CI run `38393873581`, commit `981157e2334267dae7b3a768103a54acf7e29166`. The artifact was inspected as an archive, not executed on Windows hardware. The generated inventory contains 49 package entries and no package names matching YOLO/Ultralytics.
 
 ## Physical Windows hardware checks
 
@@ -30,8 +32,8 @@ GitHub-hosted runners do not provide a physical NVIDIA GPU. Run these checks on 
 - [ ] A qualified reviewer has assessed the custom PhotoEditor licence before commercial distribution.
 - [ ] A qualified reviewer has assessed DETR/COCO training-data provenance and the implications of commercial distribution. COCO annotations are CC BY 4.0; COCO images remain under original rights-holder/Flickr terms. These facts alone do not settle every question about model training.
 - [ ] Review the generated dependency licence inventory and preserve all notices/licence texts required by the exact bundled versions.
-- [ ] Confirm no YOLO/Ultralytics packages, weights, or downloads are present in the release branch or final artifacts.
-- [ ] Confirm the release ZIP contents and file sizes from the actual successful CI artifact.
+- [x] Source/build workflow and the actual generated package inventory were checked for YOLO/Ultralytics; no YOLO/Ultralytics package names were found in the bundled 49-entry dependency inventory. Repeat a complete source/artifact scan before public release.
+- [x] Confirmed the actual successful CI artifact's nested ZIP contents and size (about 314.9 MiB; 15,702 entries).
 
 ## GitHub release publishing
 
