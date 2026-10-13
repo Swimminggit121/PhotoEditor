@@ -98,7 +98,8 @@ jobs:
   create-release:
     runs-on: windows-latest
     needs: [windows-build, windows-ai-build]
-    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')
+    # Keep public AI releases paused until model/data provenance and packaging checks are approved.
+    if: (startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/v')) && vars.ALLOW_AI_RELEASE == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
