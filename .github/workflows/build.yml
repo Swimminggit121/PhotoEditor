@@ -84,12 +84,22 @@ jobs:
         run: |
           python -c "from huggingface_hub import model_info; from ai.config import MODEL_SPECS; spec = MODEL_SPECS[0]; info = model_info(spec.model_id, revision=spec.revision); print('Model:', info.id); print('Pinned revision:', info.sha); print('SafeTensors:', bool(info.safetensors)); assert info.sha == spec.revision; assert bool(info.safetensors)"
           python -c "from ai.config import MODEL_SPECS; assert MODEL_SPECS[0].model_id == 'facebook/detr-resnet-50'; assert len(MODEL_SPECS[0].revision) == 40; assert MODEL_SPECS[0].weights_license.startswith('Apache-2.0')"
+      - name: Verify pinned model weights by SHA-256
+        run: |
+          python -c "from huggingface_hub import hf_hub_download; from ai.config import MODEL_SPECS; import hashlib; spec=MODEL_SPECS[0]; path=hf_hub_download(repo_id=spec.model_id, filename='model.safetensors', revision=spec.revision); h=hashlib.sha256(); f=open(path, 'rb'); [h.update(chunk) for chunk in iter(lambda: f.read(1024*1024), b'')]; f.close(); actual=h.hexdigest(); print('SafeTensors SHA-256:', actual); assert actual.lower() == spec.weights_sha256.lower(), 'Model weight checksum mismatch'"
       - name: Install packager
         run: pip install pyinstaller
       - name: Build CUDA-capable AI application bundle
         shell: pwsh
         run: |
           pyinstaller --noconfirm --clean --onedir --windowed --name PhotoEditor-AI --collect-all torch --collect-all torchvision --collect-all nvidia --collect-all transformers --collect-all tokenizers --collect-all safetensors --collect-all huggingface_hub --collect-data cv2 main.py
+      - name: Add third-party notices and dependency inventory
+        shell: pwsh
+        run: |
+          pip install pip-licenses
+          Copy-Item "THIRD_PARTY_NOTICES.md" "dist/PhotoEditor-AI/THIRD_PARTY_NOTICES.md"
+          pip-licenses --format=json --output-file "dist/PhotoEditor-AI/third-party-licenses.json"
+          if (!(Test-Path "dist/PhotoEditor-AI/third-party-licenses.json")) { throw "Dependency licence inventory was not generated" }
       - name: Package and verify AI application bundle
         shell: pwsh
         run: |
