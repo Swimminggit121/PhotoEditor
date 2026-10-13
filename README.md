@@ -7,36 +7,28 @@ PhotoEditor is a Windows-focused, non-destructive photo editor built with Python
 - Exposure, contrast, highlights, shadows, whites and blacks
 - Temperature, tint, vibrance and saturation
 - Texture, clarity, dehaze, sharpening and noise reduction
-- Curves and HSL
-- Professional colour grading controls
+- Curves, HSL and professional colour grading
 - Local brush, linear and radial adjustments
-- Cropping, geometry and export
-- RAW image loading where supported
-- Batch auto-editing
-- Before/after preview and history
+- Cropping, geometry, RAW loading where supported, and export
+- Batch auto-editing, before/after preview and history
 
 ## AI Studio
 
-The editor now includes an optional local AI subsystem. The normal editor remains usable without AI packages.
+The optional local AI subsystem supports object detection, face-aware focal points, sky heuristics, smart crops, quality scoring, exposure suggestions, duplicate/burst analysis, batch ranking and reference-image matching. Some features are conventional computer-vision heuristics rather than learned AI. The current subject mask combines an object-detection box with GrabCut; it is not equivalent to a dedicated segmentation model.
 
-AI features include:
+Photos are processed locally. The first use of the AI detector requires an internet connection to download model files; subsequent use can run locally from the model cache.
 
-- Object and subject detection
-- Face-aware focal point detection
-- AI subject masks
-- Sky masks
-- Smart aspect-ratio cropping
-- Photo quality analysis
-- Exposure, sharpness, noise and composition scoring
-- AI-assisted auto grading
-- Reference-image matching
-- Duplicate/burst analysis
-- Batch photo ranking and culling
-- Local denoising and upscaling pipeline
-- GPU/CPU runtime detection
-- Model caching under the user's PhotoEditor AI directory
+## AI model and licensing status
 
-AI models are loaded locally. The application does not require sending photographs to a cloud AI service.
+The YOLO/Ultralytics dependency has been removed from the AI branch. Object detection uses facebook/detr-resnet-50 through Hugging Face Transformers.
+
+- **Application licence:** LICENSE contains PhotoEditor's custom source-available licence. It permits use of the application and commercial use of edited photographs, but prohibits selling PhotoEditor itself.
+- **Implementation code:** Hugging Face Transformers is licensed under Apache-2.0. DETR model implementation is provided through Transformers.
+- **Model weights:** the official facebook/detr-resnet-50 repository declares Apache-2.0 and provides SafeTensors weights. The application requests SafeTensors rather than legacy pickle weights.
+- **Training-data provenance:** the model card says the model was trained on COCO 2017. Dataset terms and provenance are a separate question from the model repository's declared licence and must be reviewed before commercial distribution.
+- **Other dependencies:** PyTorch, torchvision, Hugging Face Hub, SafeTensors and all bundled libraries retain their own licences. See THIRD_PARTY_NOTICES.md and re-check versions before each public release.
+
+The licence audit is an engineering checklist, not legal advice. The custom PhotoEditor licence is source-available and is not an OSI-approved open-source licence.
 
 ## Optional AI installation
 
@@ -48,9 +40,7 @@ python -m pip install -r requirements.txt
 python -m pip install -r requirements-ai.txt
 ```
 
-The first detector inference can download its model automatically in a Python installation. Model files are kept outside the repository so they are not bundled into Git or every Windows executable.
-
-The consumer AI executable bundles the compact CPU PyTorch runtime to keep the download below GitHub's 2 GiB per-file release limit. It works without Python or a separate runtime install, but that bundled executable does not use CUDA. A separately configured Python environment can use an NVIDIA GPU when installed with a CUDA-enabled PyTorch build.
+For GPU acceleration, install the CUDA-enabled PyTorch wheel appropriate to your NVIDIA driver and supported CUDA version from the official PyTorch installation selector. If CUDA is not available, PhotoEditor automatically selects CPU. The CI-built consumer AI executable uses CPU-only PyTorch to keep packaging predictable; that executable does not provide CUDA acceleration. A future GPU-enabled executable must be built and tested separately rather than claiming GPU support from CPU-only binaries.
 
 ## Run
 
@@ -60,14 +50,7 @@ python main.py
 
 ## Windows build
 
-GitHub Actions builds:
-
-- PhotoEditor.exe
-- VideoEditor.exe
-- PhotoEditorSuite.exe
-- PhotoEditor-AI.exe on the dedicated AI release branch (CPU AI runtime included)
-
-The base Windows executable deliberately does not bundle large optional AI model weights. The dedicated AI executable bundles the core YOLO model and CPU AI runtime.
+GitHub Actions builds PhotoEditor.exe, VideoEditor.exe, PhotoEditorSuite.exe and a separate PhotoEditor-AI.exe artifact. The AI executable downloads DETR weights on first AI use rather than embedding weights into the release binary. The release workflow includes an executable-size guard; an artifact must pass CI before being published.
 
 ## Project structure
 
