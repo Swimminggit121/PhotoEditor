@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
+from pathlib import Path
 from typing import Any
 import cv2
 import numpy as np
@@ -28,13 +29,18 @@ class AIAnalysis:
     backend: str = "heuristic"
 
 def _rgb(image):
-    if isinstance(image, (str, bytes)):
+    if isinstance(image, (str, bytes, Path)):
         with Image.open(image) as opened:
             return np.asarray(opened.convert("RGB"))
-    return np.asarray(image.convert("RGB") if hasattr(image, "convert") else image)
+    if hasattr(image, "convert"):
+        return np.asarray(image.convert("RGB"))
+    array = np.asarray(image)
+    if array.ndim != 3 or array.shape[2] < 3:
+        raise ValueError("Expected an RGB image, PIL image, or image file path.")
+    return array[..., :3]
 
 def quality_analysis(image) -> dict[str, float]:
-    a = _rgb(image)
+    a = _rgb(image).astype(np.uint8, copy=False)
     gray = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY).astype(np.float32)
     lap = float(cv2.Laplacian(gray, cv2.CV_32F).var())
     sharp = float(np.clip(100 * np.log1p(lap) / np.log1p(900), 0, 100))
@@ -49,14 +55,12 @@ def quality_analysis(image) -> dict[str, float]:
             "exposure_score": exposure, "composition_score": composition}
 
 def detect_sky(image) -> np.ndarray:
-    a = _rgb(image)
+    a = _rgb(image).astype(np.uint8, copy=False)
     h, s, v = cv2.split(cv2.cvtColor(a, cv2.COLOR_RGB2HSV))
     top = np.zeros(h.shape, np.uint8)
     cutoff = max(1, int(h.shape[0] * .55))
     blue = (h >= 85) & (h <= 135) & (s > 25) & (v > 70)
     top[:cutoff] = blue[:cutoff].astype(np.uint8) * 255
-    if not hasattr(cv2, "connectedComponentsWithStats"):
-        return cv2.GaussianBlur(top, (0, 0), 1.2)
     n, labels, stats, _ = cv2.connectedComponentsWithStats(top)
     mask = np.zeros_like(top)
     for i in range(1, n):
@@ -80,7 +84,7 @@ def analyze_image(image, use_ai=True) -> AIAnalysis:
     q = quality_analysis(image)
     sky = float(detect_sky(image).mean() / 255)
     result = AIAnalysis(**q, sky_fraction=sky, suggestions=[])
-    a = _rgb(image)
+    a = _rgb(image).astype(np.uint8, copy=False)
     gray = cv2.cvtColor(a, cv2.COLOR_RGB2GRAY)
     face_boxes = _detect_faces(gray)
     result.faces = len(face_boxes)
