@@ -29,5 +29,5 @@ This inventory is for the AI release branch. Verify exact versions, artefacts, a
 - [ ] Generate a licence inventory/SBOM for the exact frozen executable, including transitive packages and notices.
 - [ ] Include required third-party notices and licence texts in release materials.
 - [ ] Run AI, mask, smoke and packaging tests on Windows.
-- [ ] Verify executable size, first-run model download, offline cached inference and CPU fallback. NVIDIA CUDA is supported by a compatible Python runtime; the current packaged AI executable is CPU-only.
+- [ ] Verify bundle size, first-run model download, offline cached inference and CPU fallback. The AI bundle now uses CUDA-capable PyTorch; validate NVIDIA GPU inference on a physical compatible Windows system before release.
 - [ ] Do not describe the current heuristic sky mask or GrabCut mask as a fully learned segmentation model.
