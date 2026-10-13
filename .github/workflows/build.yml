@@ -1,5 +1,9 @@
 name: PhotoEditor CI
 
+concurrency:
+  group: photoeditor-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, "release/*"]
