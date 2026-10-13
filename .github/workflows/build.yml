@@ -65,10 +65,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install CUDA-enabled PyTorch AI runtime
+      - name: Install compact CPU PyTorch AI runtime
         run: |
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-          pip install ultralytics transformers sentence-transformers huggingface-hub
+          # Keep the all-in-one consumer download below GitHub's 2 GiB per-asset limit.
+          # The AI runtime automatically falls back to CPU when CUDA is unavailable.
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install ultralytics huggingface-hub
       - name: Install packager
         run: pip install pyinstaller
       - name: Download the built-in vision model
@@ -79,7 +81,7 @@ jobs:
       - name: Build consumer AI executable
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --name PhotoEditor-AI --add-data "yolo11n-seg.pt;ai_bundle" --collect-all torch --collect-all torchvision --collect-all ultralytics --collect-all transformers --collect-all sentence_transformers --collect-data cv2 main.py
+          pyinstaller --noconfirm --clean --onefile --windowed --name PhotoEditor-AI --add-data "yolo11n-seg.pt;ai_bundle" --collect-all torch --collect-all torchvision --collect-all ultralytics --collect-data cv2 main.py
       - name: Verify AI executable exists
         shell: pwsh
         run: |
