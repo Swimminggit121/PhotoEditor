@@ -119,34 +119,48 @@ jobs:
           name: PhotoEditor-AI-Windows
           path: dist/PhotoEditor-AI-Windows.zip
 
+  # Publish the standard applications for every version tag. This job must not
+  # depend on the AI approval gate or on the optional AI packaging job.
   create-release:
     runs-on: windows-latest
-    needs: [windows-build, windows-ai-build]
-    # Keep public AI releases paused until model/data provenance and packaging checks are approved.
-    if: startsWith(github.ref, 'refs/tags/v') && vars.ALLOW_AI_RELEASE == 'true'
+    needs: [windows-build]
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: PhotoEditor-Windows
           path: release-assets
-      - uses: actions/download-artifact@v4
-        with:
-          name: PhotoEditor-AI-Windows
-          path: release-assets
-      - name: Publish Windows release
+      - name: Publish standard Windows release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          if ($env:GITHUB_REF_NAME -like "release/*") {
-            $tag = "v" + $env:GITHUB_REF_NAME.Substring(8)
-          } else {
-            $tag = $env:GITHUB_REF_NAME
-          }
+          $tag = $env:GITHUB_REF_NAME
           gh release view "$tag" *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI-Windows.zip --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
+            gh release create "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
           } else {
-            gh release upload "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe release-assets/PhotoEditor-AI-Windows.zip --clobber
+            gh release upload "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe --clobber
           }
+
+  # Publish the AI ZIP only after the separate approval gate is enabled.
+  # A skipped AI job will no longer prevent the standard release from publishing.
+  publish-ai-release-asset:
+    runs-on: windows-latest
+    needs: [create-release, windows-ai-build]
+    if: startsWith(github.ref, 'refs/tags/v') && vars.ALLOW_AI_RELEASE == 'true'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PhotoEditor-AI-Windows
+          path: release-assets
+      - name: Upload AI edition to the existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          if (!(Test-Path "release-assets/PhotoEditor-AI-Windows.zip")) {
+            throw "PhotoEditor-AI-Windows.zip is missing; refusing to publish an incomplete AI release."
+          }
+          gh release upload "$env:GITHUB_REF_NAME" release-assets/PhotoEditor-AI-Windows.zip --clobber
