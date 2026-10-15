@@ -119,12 +119,13 @@ jobs:
           name: PhotoEditor-AI-Windows
           path: dist/PhotoEditor-AI-Windows.zip
 
-  # Publish the standard applications for every version tag. This job must not
-  # depend on the AI approval gate or on the optional AI packaging job.
+  # Publish standard Windows executables from the AI release branch as v1.2.0,
+  # or publish/update the matching release when a version tag is pushed.
+  # This job is independent of the separate AI approval gate.
   create-release:
     runs-on: windows-latest
     needs: [windows-build]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release/1.2.0-ai'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -136,7 +137,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $tag = $env:GITHUB_REF_NAME
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            $tag = "v1.2.0"
+          }
           gh release view "$tag" *> $null
           if ($LASTEXITCODE -ne 0) {
             gh release create "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe --target "$env:GITHUB_SHA" --title "PhotoEditor Suite $tag" --generate-notes
