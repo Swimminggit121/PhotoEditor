@@ -13,17 +13,11 @@ PhotoEditor detects the available PyTorch backend automatically:
 - NVIDIA CUDA GPU: use CUDA acceleration when available.
 - No compatible NVIDIA GPU: use CPU automatically.
 
-### Built-in model
+### AI model
 
-The AI executable contains the YOLO11n segmentation model. On first AI use, PhotoEditor places a copy in:
+PhotoEditor downloads the pinned DETR ResNet-50 model from Hugging Face when AI inference is first used. The weights are not included in the ZIP; the download is SHA-256 verified and cached locally. An internet connection is required for the first download. Later runs can use the cached model offline.
 
-`%USERPROFILE%\\.photoeditor\\ai\\models`
-
-This means subsequent launches do not need to unpack the model again.
-
-### AI model cache
-
-Optional larger AI models are kept in the same PhotoEditor AI cache rather than being forced into the main executable. This keeps the consumer download much smaller and makes model updates independent from the application.
+The exact model revision, checksum and provenance notes are documented in `AI_MODEL_MANIFEST.json`.
 
 ### Troubleshooting
 

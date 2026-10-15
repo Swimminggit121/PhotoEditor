@@ -1,6 +1,6 @@
 # PhotoEditor AI release validation checklist
 
-Do not publish the AI edition until every required check below is complete. The GitHub Actions release gate must remain disabled while any licensing, packaging, or hardware check is open.
+Do not push changes to the designated release branch until every required check below is complete. The `ALLOW_AI_RELEASE` variable gates AI uploads from version tags, but the `release/1.2.0-ai` branch publishes to `v1.2.0` without that variable.
 
 ## Automated checks
 
@@ -37,6 +37,6 @@ GitHub-hosted runners do not provide a physical NVIDIA GPU. Run these checks on 
 
 ## GitHub release publishing
 
-The workflow already declares `contents: write`, but a previous release publish attempt returned HTTP 403. If publishing still fails after the release gate is deliberately approved, check the repository's Actions workflow-permission setting and any organisation policy that may restrict the workflow token. Do not place personal access tokens or other secrets in source code.
+The workflow already declares `contents: write`, but a previous release publish attempt returned HTTP 403. If publishing fails, check the repository's Actions workflow-permission setting and any organisation policy that may restrict the workflow token. Do not place personal access tokens or other secrets in source code.
 
-Only after the checks above are approved should the repository variable `ALLOW_AI_RELEASE` be set to `true` and a version tag be pushed. Do not enable it just to test packaging.
+The designated `release/1.2.0-ai` branch publishes its AI ZIP to the `v1.2.0` release after both the AI build and standard release jobs succeed. Complete the open licensing and physical-hardware checks before pushing changes to this branch. Other `v*` tags publish an AI ZIP only when the repository variable `ALLOW_AI_RELEASE` is `true`; do not enable it just to test packaging.

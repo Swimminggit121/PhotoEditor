@@ -29,7 +29,7 @@ The upstream [COCO Terms of Use](https://cocodataset.org/#termsofuse) distinguis
 - [x] Confirmed by source/requirements/build-workflow scan that no Ultralytics/YOLO imports, dependencies, downloads or bundled model files remain in this AI branch.
 - [x] Pin the model to immutable revision `1d5f47bd3bdd2c4bbfa585418ffe6da5028b4c0b` and verify that revision has SafeTensors weights in CI.
 - [x] Record the pinned SafeTensors SHA-256 checksum in `ai/config.py`, verify it in CI and verify it again before first model use; record it in the local runtime manifest.
-- [ ] Review COCO 2017 dataset terms/provenance separately from the model repository's declared licence. Keep ALLOW_AI_RELEASE unset until reviewed.
+- [ ] Review COCO 2017 dataset terms/provenance separately from the model repository's declared licence. Keep `ALLOW_AI_RELEASE` unset to block tag-triggered AI uploads until reviewed; the designated release branch publishes independently of that variable.
 - [ ] Confirm the CI-generated `third-party-licenses.json` against the exact frozen AI bundle; this is a dependency licence inventory, not a formal SBOM.
 - [ ] Confirm required third-party notices and licence texts are present in the built release ZIP.
 - [ ] Run AI, mask, smoke and packaging tests on Windows.

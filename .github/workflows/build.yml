@@ -149,12 +149,12 @@ jobs:
             gh release upload "$tag" release-assets/PhotoEditor.exe release-assets/VideoEditor.exe release-assets/PhotoEditorSuite.exe --clobber
           }
 
-  # Publish the AI ZIP only after the separate approval gate is enabled.
+  # Publish from the designated AI release branch, or require approval for other version tags.
   # A skipped AI job will no longer prevent the standard release from publishing.
   publish-ai-release-asset:
     runs-on: windows-latest
     needs: [create-release, windows-ai-build]
-    if: startsWith(github.ref, 'refs/tags/v') && vars.ALLOW_AI_RELEASE == 'true'
+    if: always() && needs.create-release.result == 'success' && needs.windows-ai-build.result == 'success' && (github.ref == 'refs/heads/release/1.2.0-ai' || (startsWith(github.ref, 'refs/tags/v') && vars.ALLOW_AI_RELEASE == 'true'))
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -168,4 +168,9 @@ jobs:
           if (!(Test-Path "release-assets/PhotoEditor-AI-Windows.zip")) {
             throw "PhotoEditor-AI-Windows.zip is missing; refusing to publish an incomplete AI release."
           }
-          gh release upload "$env:GITHUB_REF_NAME" release-assets/PhotoEditor-AI-Windows.zip --clobber
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            $tag = "v1.2.0"
+          }
+          gh release upload "$tag" release-assets/PhotoEditor-AI-Windows.zip --clobber

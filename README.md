@@ -46,7 +46,7 @@ The repository also contains a video editor entry point and a suite entry point.
 | Edition | Intended use | Status |
 |---|---|---|
 | **PhotoEditor** | Standard photo editor with a lighter dependency set | Built by the standard Windows workflow |
-| **PhotoEditor AI** | Standard editor plus optional local AI analysis features | Experimental; release gate remains closed until validation is complete |
+| **PhotoEditor AI** | Standard editor plus optional local AI analysis features | Experimental; the `release/1.2.0-ai` branch publishes its ZIP to `v1.2.0`, but licensing and physical-hardware validation remain outstanding |
 | **VideoEditor** | Separate video-editor entry point | Built by the standard Windows workflow |
 | **PhotoEditor Suite** | Suite entry point | Built by the standard Windows workflow |
 
@@ -58,7 +58,7 @@ The repository also contains a video editor entry point and a suite entry point.
 
 **AI ZIP installation:** when an AI bundle is published, download `PhotoEditor-AI-Windows.zip`, extract the *entire* folder, and run `PhotoEditor-AI.exe` from inside the extracted folder. Keep the EXE beside its supporting runtime files; do not move the EXE on its own. The model weights are downloaded on first AI use and are not embedded in the ZIP, so the first AI run requires an internet connection.
 
-Do not assume an unpublished artifact is stable or ready for everyday use. No new AI release should be considered official until the release checklist has been approved.
+The `release/1.2.0-ai` branch publishes its AI ZIP to `v1.2.0` when its AI build and standard release jobs succeed. AI uploads from other `v*` tags require the `ALLOW_AI_RELEASE` repository variable to be `true`. This automation does not mean the AI edition is validated or supported: complete the licensing and physical-hardware checks in `AI_RELEASE_VALIDATION.md` before treating it as release-ready.
 
 ## Install and run from source
 
@@ -267,7 +267,7 @@ python tests/ai_test.py
 
 - Open the failed run and inspect the first failing step and its log.
 - For release publishing, repository or organisation Actions token permissions may prevent creating releases even if the workflow requests `contents: write`.
-- Do not commit personal access tokens or credentials. Keep the AI release gate closed until licensing, packaging and hardware validation are approved.
+- Do not commit personal access tokens or credentials. Keep `ALLOW_AI_RELEASE` unset to block AI uploads from other version tags, and do not push to the designated release branch until licensing, packaging and hardware validation are approved.
 
 ## Repository layout
 

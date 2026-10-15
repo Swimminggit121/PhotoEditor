@@ -27,7 +27,7 @@ This branch prepares a consumer-friendly AI-enabled Windows bundle. The standard
 - The official facebook/detr-resnet-50 model repository declares Apache-2.0 and provides SafeTensors weights.
 - The COCO terms distinguish CC BY 4.0 annotations from images governed by original Flickr terms/licences. This has been documented, but the model-training/data-provenance question still requires qualified review.
 - CI is configured to include a generated third-party dependency licence inventory in the AI bundle; the output must be confirmed from a successful build.
-- Public AI release is gated by the `ALLOW_AI_RELEASE` repository variable until the remaining licensing and packaging checks are approved.
+- The `release/1.2.0-ai` branch publishes its AI ZIP to `v1.2.0` when the build jobs succeed; AI uploads from other version tags require `ALLOW_AI_RELEASE` to be `true`. This workflow routing does not replace the outstanding licensing and physical-hardware checks in `AI_RELEASE_VALIDATION.md`.
 - The PhotoEditor custom licence reserves paid official distribution to the copyright holder; recipients may share free copies but may not resell the application. Obtain qualified legal review before commercial distribution.
 
 ## Planned release assets after verification
