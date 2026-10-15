@@ -97,16 +97,18 @@ jobs:
         shell: pwsh
         run: |
           pip install pip-licenses
+          Copy-Item "LICENSE" "dist/PhotoEditor-AI/LICENSE"
           Copy-Item "THIRD_PARTY_NOTICES.md" "dist/PhotoEditor-AI/THIRD_PARTY_NOTICES.md"
           Copy-Item "AI_MODEL_MANIFEST.json" "dist/PhotoEditor-AI/AI_MODEL_MANIFEST.json"
-          pip-licenses --format=json --output-file "dist/PhotoEditor-AI/third-party-licenses.json"
+          pip-licenses --format=json --with-license-file --output-file "dist/PhotoEditor-AI/third-party-licenses.json"
+          if (!(Test-Path "dist/PhotoEditor-AI/LICENSE")) { throw "Application licence was not packaged" }
           if (!(Test-Path "dist/PhotoEditor-AI/third-party-licenses.json")) { throw "Dependency licence inventory was not generated" }
           if (!(Test-Path "dist/PhotoEditor-AI/AI_MODEL_MANIFEST.json")) { throw "AI model manifest was not packaged" }
       - name: Package and verify AI application bundle
         shell: pwsh
         run: |
           if (!(Test-Path "dist/PhotoEditor-AI/PhotoEditor-AI.exe")) { throw "PhotoEditor-AI.exe was not created" }
-          foreach ($required in @("THIRD_PARTY_NOTICES.md", "AI_MODEL_MANIFEST.json", "third-party-licenses.json")) {
+          foreach ($required in @("LICENSE", "THIRD_PARTY_NOTICES.md", "AI_MODEL_MANIFEST.json", "third-party-licenses.json")) {
             if (!(Test-Path ("dist/PhotoEditor-AI/" + $required))) { throw ("Required release file missing: " + $required) }
           }
           Compress-Archive -Path "dist/PhotoEditor-AI/*" -DestinationPath "dist/PhotoEditor-AI-Windows.zip" -CompressionLevel Optimal -Force
@@ -156,6 +158,7 @@ jobs:
     needs: [create-release, windows-ai-build]
     if: always() && needs.create-release.result == 'success' && needs.windows-ai-build.result == 'success' && (github.ref == 'refs/heads/release/1.2.0-ai' || (startsWith(github.ref, 'refs/tags/v') && vars.ALLOW_AI_RELEASE == 'true'))
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: PhotoEditor-AI-Windows
